@@ -141,7 +141,7 @@ export class MapRenderer {
           
           // ПРИОРИТЕТ 1: Координаты контрагента
           let center
-          const zoom = 5
+          const zoom = 10
           
           if (counterpartyData.latitude && counterpartyData.longitude) {
             center = [counterpartyData.latitude, counterpartyData.longitude];
