@@ -33,7 +33,7 @@ router.post(
         action: 'created',
         mapUrl: `http${process.env.NODE_ENV === 'production' ? 's' : ''}://${
           process.env.HOST
-        }:${process.env.PORT}/maps/competitors/${req.body.guid}`,
+        }/maps/competitors/${req.body.guid}`,
         guid: req.body.guid,
         message: 'Данные контрагента успешно сохранены',
         data: {
