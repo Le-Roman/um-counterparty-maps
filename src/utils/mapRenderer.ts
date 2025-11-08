@@ -16,8 +16,6 @@ export class MapRenderer {
     guid: string,
     data: CounterpartyInstance
   ): string {
-    const hasCompetitors = data.competitors && data.competitors.length > 0
-
     return `
   <!DOCTYPE html>
   <html>
@@ -40,6 +38,7 @@ export class MapRenderer {
           width: 100%;
           height: 100%;
           position: relative;
+          overflow: hidden;
         }
         .pin-marker {
           width: 34px;
@@ -58,6 +57,7 @@ export class MapRenderer {
           position: absolute;
           z-index: 1000;
           pointer-events: none;
+          max-width: calc(100% - 20px);
         }
         .balloon {
           background: white;
@@ -190,12 +190,36 @@ export class MapRenderer {
           // Функция для обновления позиции балуна
           const updateBalloonPosition = (markerElement, balloonContainer) => {
             if (!markerElement || !balloonContainer) return;
-            
+  
             const rect = markerElement.getBoundingClientRect();
             const mapRect = document.getElementById('map').getBoundingClientRect();
-            
-            balloonContainer.style.left = (rect.left - mapRect.left) + 'px';
-            balloonContainer.style.top = (rect.top - mapRect.top - balloonContainer.offsetHeight - 10) + 'px';
+  
+            // Проверяем, виден ли маркер в viewport карты
+            const isMarkerVisible = (
+            rect.left >= mapRect.left &&
+            rect.right <= mapRect.right &&
+            rect.top >= mapRect.top &&
+            rect.bottom <= mapRect.bottom
+            );
+  
+            if (!isMarkerVisible) {
+                // Скрываем балун если маркер не виден
+                balloonContainer.style.display = 'none';
+                return;
+            }
+  
+            // Показываем балун и позиционируем
+            balloonContainer.style.display = 'block';
+  
+            let left = rect.left - mapRect.left;
+            let top = rect.top - mapRect.top - balloonContainer.offsetHeight - 10;
+  
+            // Корректируем позицию чтобы не выходить за границы
+            left = Math.max(10, Math.min(left, mapRect.width - balloonContainer.offsetWidth - 10));
+            top = Math.max(10, top);
+  
+            balloonContainer.style.left = left + 'px';
+            balloonContainer.style.top = top + 'px';
           };
   
           // Функция для обновления всех позиций балунов
