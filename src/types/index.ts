@@ -44,3 +44,7 @@ export interface ApiResponse<T = any> {
   action?: 'created' | 'updated'
   mapUrl?: string
 }
+
+export enum Queue {
+  CreateCounterparty = 'create_counterparty',
+}

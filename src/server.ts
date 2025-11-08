@@ -7,7 +7,6 @@ dotenv.config()
 import { initializeDatabase } from './config/database'
 import { corsOptions, apiCorsOptions } from './config/cors'
 
-
 // Middleware
 import {
   requestLogger,
@@ -17,6 +16,7 @@ import {
 
 // Routes
 import routes from './routes'
+import { queueService } from './services/queueService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -24,6 +24,11 @@ const HOST = process.env.HOST || 'localhost'
 
 // Initialize database
 initializeDatabase().catch(console.error)
+
+// Initialize queue
+if (process.env.ALLOW_EXTERNAL_API === 'true') {
+  queueService.init()
+}
 
 // Middleware
 app.use(express.json({ limit: '10mb' }))

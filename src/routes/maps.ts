@@ -5,7 +5,7 @@ import { MapRenderer } from '../utils/mapRenderer'
 const router = Router()
 
 // GET - просмотр карты контрагента
-router.get('/:guid', async (req, res) => {
+router.get('/competitors/:guid', async (req, res) => {
   const { guid } = req.params
 
   try {
