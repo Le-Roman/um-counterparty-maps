@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Карта контрагента - ${data.manager}</title>
+    <meta charset="utf-8" />
+    <script src="https://api-maps.yandex.ru/v3/?apikey=${
+      process.env.YANDEX_API_KEY
+    }&lang=ru_RU"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      .header {
+        padding: 20px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+      }
+      #map {
+        width: 100%;
+        height: calc(100vh - 140px);
+      }
+      .info {
+        padding: 10px 20px;
+        background: #e9f7fe;
+        font-size: 14px;
+      }
+      .legend {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+      }
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>${data.manager}</h1>
+      <p>
+        <strong>Цена:</strong> ${data.price} | <strong>Телефон:</strong> ${
+        data.phone }
+      </p>
+      <p><strong>Адрес:</strong> ${data.address}</p>
+    </div>
+    <div class="info">
+      Контрагент: ${guid} | Конкурентов: ${data.competitors?.length || 0}
+    </div>
+
+    ${ hasCompetitors ? `
+    <div class="legend">
+      <!-- <div class="legend-item">
+        <div class="legend-color" style="background: #ff0000"></div>
+        <span>Контрагент</span>
+      </div> -->
+      <div class="legend-item">
+        <div class="legend-color" style="background: #0000ff"></div>
+        <span>Конкуренты</span>
+      </div>
+    </div>
+    ` : '' }
+
+    <div id="map"></div>
+
+    <script>
+      const counterpartyData = `${JSON.stringify(data)}`
+      initMap()
+      async function initMap() {
+        await ymaps.ready
+        const { YMap, YMapDefaultSchemeLayer } = ymaps3
+
+        // Определяем центр карты
+        let center = [55.76, 37.64]
+        if (counterpartyData.latitude && counterpartyData.longitude) {
+          center = [counterpartyData.latitude, counterpartyData.longitude]
+        }
+
+        const map = new YMap(document.getElementById('map'), {
+          location: {
+            center,
+            zoom: 10,
+          },
+        })
+
+        // Добавляем контрагента (красная метка)
+        if (counterpartyData.latitude && counterpartyData.longitude) {
+          const counterpartyPlacemark = new ymaps.Placemark(
+            [counterpartyData.latitude, counterpartyData.longitude],
+            {
+              hintContent: counterpartyData.manager,
+              balloonContent: `
+                          <h3>Контрагент</h3>
+                          <p><strong>Менеджер:</strong> \${counterpartyData.manager}</p>
+                          <p><strong>Цена:</strong> \${counterpartyData.price}</p>
+                          <p><strong>Телефон:</strong> \${counterpartyData.phone}</p>
+                          <p><strong>Адрес:</strong> \${counterpartyData.address}</p>
+                      `,
+            },
+            {
+              preset: 'islands#redIcon',
+              balloonCloseButton: true,
+            }
+          )
+          map.geoObjects.add(counterpartyPlacemark)
+        }
+
+        // Добавляем конкурентов (синие метки)
+        if (
+          counterpartyData.competitors &&
+          counterpartyData.competitors.length > 0
+        ) {
+          counterpartyData.competitors.forEach((competitor) => {
+            if (competitor.latitude && competitor.longitude) {
+              const competitorPlacemark = new ymaps.Placemark(
+                [competitor.latitude, competitor.longitude],
+                {
+                  hintContent: competitor.counterpartyName,
+                  balloonContent: `
+                                  <h3>\${competitor.counterpartyName}</h3>
+                                  <p><strong>Менеджер:</strong> \${competitor.manager}</p>
+                                  <p><strong>Цена:</strong> \${competitor.price}</p>
+                                  <p><strong>Оборот:</strong> \${competitor.revenueLast3Months.toLocaleString('ru-RU')} руб.</p>
+                                  <p><strong>Тип отношений:</strong> \${competitor.relationshipType}</p>
+                                  <p><strong>Последняя продажа:</strong> \${competitor.lastSaleDate}</p>
+                                  <p><strong>Адрес:</strong> \${competitor.address}</p>
+                                  <p><strong>Телефон:</strong> \${competitor.phone}</p>
+                              `,
+                },
+                {
+                  preset: 'islands#blueIcon',
+                  balloonCloseButton: true,
+                }
+              )
+              map.geoObjects.add(competitorPlacemark)
+            }
+          })
+
+          // Автоматическое подстраивание границ
+          const bounds = map.geoObjects.getBounds()
+          if (bounds) {
+            map.setBounds(bounds, { checkZoomRange: true })
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
