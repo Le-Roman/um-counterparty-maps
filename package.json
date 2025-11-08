@@ -9,6 +9,8 @@
     "start:dev": "cross-env NODE_ENV=development nodemon src/server.ts",
     "start:prod": "cross-env NODE_ENV=production nodemon src/server.ts",
     "start:auto:prod": "pm2 start ecosystem.config.js --watch --only um-counterparty-maps",
+    "restart:auto:prod": "pm2 restart ecosystem.config.js --watch --only um-cash-management-system-server",
+    "stop:auto:prod": "pm2 stop ecosystem.config.js --only um-cash-management-system-server",
     "db:migrate:dev": "cross-env NODE_ENV=development npx sequelize-cli db:migrate",
     "db:migrate:undo:all:dev": "cross-env NODE_ENV=development npx sequelize-cli db:migrate:undo:all",
     "db:migrate:prod": "cross-env NODE_ENV=production npx sequelize-cli db:migrate",
