@@ -28,7 +28,11 @@ export class MapRenderer {
         process.env.YANDEX_API_KEY
       }&lang=ru_RU"></script>
       <style>
+        html {
+          height: 100%;
+        }
         body {
+          height: 100%;
           margin: 0;
           font-family: Arial, sans-serif;
         }
