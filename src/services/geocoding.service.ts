@@ -14,11 +14,15 @@ export const geocodeAddress = async (
     const response = await fetch(
       `https://geocode-maps.yandex.ru/v1/?apikey=${
         process.env.YANDEX_API_KEY
-      }&format=json&geocode=${encodeURIComponent(address)}`
+      }&format=json&geocode=${encodeURIComponent(address)}`,
+      {
+        headers: {
+          Referer: `https://${process.env.HOST}`,
+        },
+      }
     )
 
     if (!response.ok) {
-      console.log(JSON.stringify(response))
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -42,18 +46,4 @@ export const geocodeAddress = async (
     console.error('Ошибка геокодирования адреса:', address, error)
     return null
   }
-}
-
-// Функция для проверки валидности координат
-export const isValidCoordinates = (lat: number, lng: number): boolean => {
-  return (
-    lat !== undefined &&
-    lng !== undefined &&
-    lat !== null &&
-    lng !== null &&
-    Math.abs(lat) > 0.001 &&
-    Math.abs(lng) > 0.001 &&
-    Math.abs(lat) <= 90 &&
-    Math.abs(lng) <= 180
-  )
 }
