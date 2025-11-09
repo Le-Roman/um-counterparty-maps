@@ -3,23 +3,67 @@ import MapStorage from '../storage/MapStorage'
 import { validateMapData } from '../middleware/validation'
 import { AuthenticatedRequest } from '../middleware/security'
 import { amqpService } from '../services/amqp.service'
-import { Queue } from '../types'
+import { MapRequestData, Queue } from '../types'
+import { geocodeAddress } from '../services/geocoding.service'
+import { needsGeocoding } from '../utils/coordinates'
+import { processWithConcurrency } from '../utils/processWithConcurrency'
 
 const router = Router()
 
-// POST - создание/обновление карты
 router.post(
   '/maps/competitors',
   validateMapData,
   async (req: AuthenticatedRequest, res) => {
     try {
-      console.log(
-        `📍 Создание/обновление карты ${req.body.guid} от ${
-          req.clientInfo?.origin || 'unknown source'
-        }`
-      )
+      const mapData = req.body as MapRequestData
 
-      const result = await MapStorage.createOrUpdate(req.body)
+      // Собираем все элементы для геокодирования
+      const itemsToGeocode: Array<{ item: any; address: string }> = []
+
+      if (needsGeocoding(mapData)) {
+        itemsToGeocode.push({ item: mapData, address: mapData.address! })
+      }
+
+      if (mapData.competitors) {
+        mapData.competitors.forEach((competitor) => {
+          if (needsGeocoding(competitor)) {
+            itemsToGeocode.push({
+              item: competitor,
+              address: competitor.address!,
+            })
+          }
+        })
+      }
+
+      // Выполняем геокодирование с ограничением параллелизма
+      if (itemsToGeocode.length > 0) {
+        console.log(
+          `Выполняется геокодирование ${itemsToGeocode.length} адресов...`
+        )
+
+        await processWithConcurrency(
+          itemsToGeocode,
+          async ({ item, address }) => {
+            try {
+              const coords = await geocodeAddress(address)
+              if (coords) {
+                item.latitude = coords.latitude
+                item.longitude = coords.longitude
+                console.log(
+                  `Геокодирован адрес: ${address} -> ${coords.latitude}, ${coords.longitude}`
+                )
+              }
+            } catch (error) {
+              console.error(`Ошибка геокодирования адреса ${address}:`, error)
+            }
+          },
+          3 // Максимум 3 параллельных запроса
+        )
+
+        console.log('Геокодирование завершено')
+      }
+
+      const result = await MapStorage.createOrUpdate(mapData)
 
       if (!result.success) {
         return res.status(500).json({
