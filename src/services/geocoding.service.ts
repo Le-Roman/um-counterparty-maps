@@ -18,7 +18,7 @@ export const geocodeAddress = async (
     )
 
     if (!response.ok) {
-      console.log(response)
+      console.log(JSON.stringify(response))
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
