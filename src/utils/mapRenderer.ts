@@ -183,22 +183,19 @@ export class MapRenderer {
         const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
         
         // ПРИОРИТЕТ 1: Координаты контрагента
-        let center
-        const zoom = 10
+        let center = [37.64, 55.76]
+        const zoom = 14
         
         if (counterpartyData.latitude && counterpartyData.longitude) {
-          center = [counterpartyData.latitude, counterpartyData.longitude];
+          center = [counterpartyData.longitude, counterpartyData.latitude];
         } else {
           // Если у контрагента нет координат, ищем у первого конкурента
           const firstCompetitor = counterpartyData.competitors?.find(c => c.latitude && c.longitude);
           if (firstCompetitor) {
-            center = [firstCompetitor.latitude, firstCompetitor.longitude];
-          } else {
-            // Если вообще нет координат - используем Москву по умолчанию
-            center = [55.76, 37.64];
-          }
+            center = [firstCompetitor.longitude, firstCompetitor.latitude];
+          } 
         }
-
+        console.log({center})
         const map = new YMap(
           document.getElementById('map'),
           {
@@ -405,7 +402,7 @@ export class MapRenderer {
               const balloonContent = \`
                 <div class="balloon">
                   <h3>🎯 Новый клиент</h3>
-                  <p><strong>Телефон:</strong> \${counterpartyData.phone}</p>
+                  <p><strong>Телефон:</strong> \${counterpartyData.phone || '-'}</p>
                   <p><strong>Менеджер:</strong> \${counterpartyData.manager}</p>
                   <p><strong>Адрес:</strong> \${counterpartyData.address}</p>
                   <br/>
@@ -432,13 +429,13 @@ export class MapRenderer {
         // Добавляем контрагента - ПРИОРИТЕТНЫЙ МАРКЕР
         if (counterpartyData.latitude && counterpartyData.longitude) {
           const counterpartyMarker = createPinMarker(
-            [counterpartyData.latitude, counterpartyData.longitude],
+            [counterpartyData.longitude, counterpartyData.latitude],
             'green',
             'Контрагент: Новый клиент',
             false
           );
           map.addChild(counterpartyMarker);
-          markers.push([counterpartyData.latitude, counterpartyData.longitude]);
+          markers.push([counterpartyData.longitude, counterpartyData.latitude]);
           
           // Автоматически открываем балун контрагента
           setTimeout(() => {
@@ -454,7 +451,7 @@ export class MapRenderer {
             if (competitor.latitude && competitor.longitude) {
               const competitorCompactContent = \`
                 <p><strong> \${competitor.name}</strong></p>
-                <p><strong>Тип:</strong> \${competitor.relationship_type}</p>
+                <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
                 <p><strong>Цена:</strong> \${competitor.price}</p>
                 <p><strong>Оборот:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
               \`;
@@ -462,7 +459,7 @@ export class MapRenderer {
               const competitorFullContent = \`
                 <h3>⚡ Конкурент</h3>
                 <p><strong>Название:</strong> \${competitor.name}</p>
-                <p><strong>Тип:</strong> \${competitor.relationship_type}</p>
+                <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
                 <p><strong>Телефон:</strong> \${competitor.phone}</p>
                 <p><strong>Менеджер:</strong> \${competitor.manager}</p>
                 <p><strong>Адрес:</strong> \${competitor.address}</p>
@@ -473,7 +470,7 @@ export class MapRenderer {
               \`;
               
               const competitorMarker = createPinMarker(
-                [competitor.latitude, competitor.longitude],
+                [competitor.longitude, competitor.latitude],
                 'red',
                 'Конкурент: ' + competitor.name,
                 true,
@@ -481,7 +478,7 @@ export class MapRenderer {
                 competitorFullContent
               );
               map.addChild(competitorMarker);
-              markers.push([competitor.latitude, competitor.longitude]);
+              markers.push([competitor.longitude, competitor.latitude]);
             }
           });
         }
@@ -496,43 +493,8 @@ export class MapRenderer {
         // Обновляем позиции балунов
         setInterval(updateAllBalloonPositions, 100);
 
-        // Автоматическое подстраивание границ только если есть несколько меток
-        if (markers.length > 1) {
-          const bounds = markers.reduce((acc, coord) => {
-            return {
-              north: Math.max(acc.north, coord[0]),
-              south: Math.min(acc.south, coord[0]),
-              east: Math.max(acc.east, coord[1]),
-              west: Math.min(acc.west, coord[1])
-            };
-          }, {
-            north: -90,
-            south: 90,
-            east: -180,
-            west: 180
-          });
-
-          if (bounds.north !== -90 && bounds.south !== 90 && markers.length > 1) {
-            const initialCenter = center;
-            const counterpartyCoords = [counterpartyData.latitude, counterpartyData.longitude];
-            
-            // Подстраиваем границы только если центр не совпадает с координатами контрагента
-            // или если у контрагента нет координат
-            if (!counterpartyCoords[0] || !counterpartyCoords[1] || 
-                Math.abs(initialCenter[0] - counterpartyCoords[0]) > 0.001 || 
-                Math.abs(initialCenter[1] - counterpartyCoords[1]) > 0.001) {
-              
-              setTimeout(() => {
-                map.setLocation({
-                  bounds: [
-                    [bounds.west - 0.01, bounds.south - 0.01],
-                    [bounds.east + 0.01, bounds.north + 0.01]
-                  ]
-                });
-              }, 1500);
-            }
-          }
-        }
+        
+        
       }).catch(error => {
         console.error('Ошибка загрузки Яндекс Карт:', error);
         document.getElementById('map').innerHTML = 
