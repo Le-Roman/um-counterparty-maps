@@ -18,492 +18,453 @@ export class MapRenderer {
     data: CounterpartyInstance
   ): string {
     return `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Карта контрагента - ${data.manager}</title>
-    <meta charset="utf-8" />
-    <script src="https://api-maps.yandex.ru/v3/?apikey=${
-      process.env.YANDEX_API_KEY
-    }&lang=ru_RU"></script>
-    <style>
-      html {
-        height: 100%;
-      }
-      body {
-        height: 100%;
-        margin: 0;
-        font-family: Arial, sans-serif;
-      }
-      #map {
-        width: 100%;
-        height: 100%;
-        position: relative;
-        overflow: hidden;
-      }
-      .pin-marker {
-        width: 34px;
-        height: 34px;
-        cursor: pointer;
-        transform: translate(-17px, -34px);
-        z-index: 100;
-      }
-      .pin-marker.green svg {
-        fill: seagreen;
-      }
-      .pin-marker.red svg {
-        fill: orangered;
-      }
-      .balloon-container {
-        position: absolute;
-        z-index: 1000;
-        pointer-events: none;
-        max-width: calc(100% - 20px);
-      }
-      .balloon {
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        max-width: 300px;
-        font-family: Arial, sans-serif;
-        border: 2px solid #ccc;
-        pointer-events: auto;
-        position: relative;
-      }
-      /* Базовые стили стрелки (по умолчанию - сверху слева) */
-      .balloon::after {
-        content: '';
-        position: absolute;
-        left: 5px;
-        top: 100%;
-        border: 10px solid transparent;
-        border-top-color: #ccc;
-      }
-      .balloon::before {
-        content: '';
-        position: absolute;
-        left: 5px;
-        top: 100%;
-        border: 10px solid transparent;
-        border-top-color: white;
-        margin-top: -2px;
-        z-index: 1;
-      }
-      /* Стрелка сверху справа */
-      .balloon.arrow-top-right::after {
-        left: auto;
-        right: 5px;
-      }
-      .balloon.arrow-top-right::before {
-        left: auto;
-        right: 5px;
-      }
-      /* Стрелка снизу слева */
-      .balloon.arrow-bottom-left::after {
-        top: -20px;
-        border-top-color: transparent;
-        border-bottom-color: #ccc;
-      }
-      .balloon.arrow-bottom-left::before {
-        top: -20px;
-        border-top-color: transparent;
-        border-bottom-color: white;
-        margin-top: 2px;
-      }
-      /* Стрелка снизу справа */
-      .balloon.arrow-bottom-right::after {
-        top: -20px;
-        left: auto;
-        right: 5px;
-        border-top-color: transparent;
-        border-bottom-color: #ccc;
-      }
-      .balloon.arrow-bottom-right::before {
-        top: -20px;
-        left: auto;
-        right: 5px;
-        border-top-color: transparent;
-        border-bottom-color: white;
-        margin-top: 2px;
-      }
-      .competitor-balloon {
-        border: 2px solid #ccc;
-      }
-      .competitor-balloon::after {
-        border-top-color: #ccc;
-      }
-      .balloon h3 {
-        margin: 0 0 10px 0;
-        color: #333;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-      }
-      .balloon p {
-        margin: 5px 0;
-        color: #666;
-      }
-      .balloon strong {
-        color: #333;
-      }
-      .balloon-more {
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 8px;
-        font-size: 12px;
-      }
-      .balloon-more:hover {
-        background: #0056b3;
-      }
-      .balloon-full {
-        display: none;
-      }
-      .balloon.compact .balloon-full {
-        display: none;
-      }
-      .balloon.expanded .balloon-compact {
-        display: none;
-      }
-      .balloon.expanded .balloon-full {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="map"></div>
-
-    <script>
-      const counterpartyData = ${JSON.stringify(data)};
-      
-      ymaps3.ready.then(() => {
-        const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
-        
-        // ПРИОРИТЕТ 1: Координаты контрагента
-        let center = [37.64, 55.76]
-        const zoom = 14
-        
-        if (counterpartyData.latitude && counterpartyData.longitude) {
-          center = [counterpartyData.longitude, counterpartyData.latitude];
-        } else {
-          // Если у контрагента нет координат, ищем у первого конкурента
-          const firstCompetitor = counterpartyData.competitors?.find(c => c.latitude && c.longitude);
-          if (firstCompetitor) {
-            center = [firstCompetitor.longitude, firstCompetitor.latitude];
-          } 
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Карта контрагента - ${data.manager}</title>
+      <meta charset="utf-8" />
+      <script src="https://api-maps.yandex.ru/v3/?apikey=${
+        process.env.YANDEX_API_KEY
+      }&lang=ru_RU"></script>
+      <style>
+        html {
+          height: 100%;
         }
-        console.log({center})
-        const map = new YMap(
-          document.getElementById('map'),
-          {
-            location: {
-              center,
-              zoom
-            }
-          },
-          [
-            new YMapDefaultSchemeLayer({}),
-            new YMapDefaultFeaturesLayer({})
-          ]
-        );
-
-        let activeBalloon = null;
-        let activeMarker = null;
-        const competitorBalloons = new Map();
-
-        // Функция для закрытия балуна контрагента
-        const closeBalloon = () => {
-          if (activeBalloon) {
-            activeBalloon.remove();
-            activeBalloon = null;
-            activeMarker = null;
-          }
-        };
-
-        // Функция для обновления позиции балуна с адаптивным позиционированием
-        const updateBalloonPosition = (markerElement, balloonContainer) => {
-          if (!markerElement || !balloonContainer) return;
-          
-          const rect = markerElement.getBoundingClientRect();
-          const mapRect = document.getElementById('map').getBoundingClientRect();
-          
-          // Проверяем, виден ли маркер в viewport карты
-          const isMarkerVisible = (
-            rect.left >= mapRect.left &&
-            rect.right <= mapRect.right &&
-            rect.top >= mapRect.top &&
-            rect.bottom <= mapRect.bottom
-          );
-          
-          if (!isMarkerVisible) {
-            balloonContainer.style.display = 'none';
-            return;
-          }
-          
-          balloonContainer.style.display = 'block';
-          
-          const balloonWidth = balloonContainer.offsetWidth;
-          const balloonHeight = balloonContainer.offsetHeight;
-          const markerWidth = 34;
-          const markerHeight = 34;
-          
-          // Позиция по умолчанию - сверху справа
-          let position = {
-            left: rect.left - mapRect.left,
-            top: rect.top - mapRect.top - balloonHeight - 10,
-            arrow: 'top-left'
-          };
-          
-          // Проверяем, помещается ли балун в позиции по умолчанию
-          const fitsDefault = 
-            position.left >= 10 && 
-            position.left + balloonWidth <= mapRect.width - 10 &&
-            position.top >= 10;
-          
-          if (fitsDefault) {
-            // Если помещается - используем позицию по умолчанию
-            balloonContainer.style.left = position.left + 'px';
-            balloonContainer.style.top = position.top + 'px';
-            updateBalloonArrow(balloonContainer, position.arrow);
-            return;
-          }
-          
-          // Если не помещается в позиции по умолчанию, ищем альтернативу
-          
-          // 1. Проверяем выход за правый край
-          if (position.left + balloonWidth > mapRect.width - 10) {
-            // Пробуем позицию сверху слева
-            position.left = rect.left - mapRect.left - balloonWidth + markerWidth;
-            position.arrow = 'top-right';
-            
-            // Если и слева не помещается, пробуем снизу
-            if (position.left < 10) {
-              position.left = rect.left - mapRect.left;
-              position.top = rect.bottom - mapRect.top + 10;
-              position.arrow = 'bottom-left';
-              
-              // Если снизу справа не помещается, пробуем снизу слева
-              if (position.left + balloonWidth > mapRect.width - 10) {
-                position.left = rect.left - mapRect.left - balloonWidth + markerWidth;
-                position.arrow = 'bottom-right';
-              }
-            }
-          }
-          
-          // 2. Проверяем выход за верхний край (только если еще не меняли на нижнюю позицию)
-          if (position.top < 10 && position.arrow.includes('top')) {
-            position.top = rect.bottom - mapRect.top + 10;
-            position.arrow = position.arrow.replace('top', 'bottom');
-          }
-          
-          // 3. Проверяем выход за левый край (для левых позиций)
-          if (position.left < 10 && position.arrow.includes('right')) {
-            position.left = rect.left - mapRect.left;
-            position.arrow = position.arrow.replace('right', 'left');
-          }
-          
-          // 4. Финальная корректировка - если все равно не помещается, прижимаем к краям
-          position.left = Math.max(10, Math.min(position.left, mapRect.width - balloonWidth - 10));
-          position.top = Math.max(10, Math.min(position.top, mapRect.height - balloonHeight - 10));
-          
-          balloonContainer.style.left = position.left + 'px';
-          balloonContainer.style.top = position.top + 'px';
-          updateBalloonArrow(balloonContainer, position.arrow);
-        };
-
-        // Функция для обновления позиции стрелки балуна
-        const updateBalloonArrow = (balloonContainer, arrowPosition) => {
-          const balloon = balloonContainer.querySelector('.balloon');
-          if (!balloon) return;
-          
-          // Удаляем все классы стрелок
-          balloon.classList.remove('arrow-top-left', 'arrow-top-right', 'arrow-bottom-left', 'arrow-bottom-right');
-          
-          // Добавляем класс для текущей позиции стрелки (ИСПРАВЛЕННАЯ СТРОКА)
-          balloon.classList.add(\`arrow-\${arrowPosition}\`);
-        };
+        body {
+          height: 100%;
+          margin: 0;
+          font-family: Arial, sans-serif;
+        }
+        #map {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          overflow: hidden;
+        }
         
-        // Функция для обновления всех позиций балунов
-        const updateAllBalloonPositions = () => {
-          if (activeBalloon && activeMarker) {
-            updateBalloonPosition(activeMarker, activeBalloon);
-          }
-          competitorBalloons.forEach((balloonContainer, markerElement) => {
-            updateBalloonPosition(markerElement, balloonContainer);
-          });
-        };
-
-        // Функция для создания балуна конкурента
-        const createCompetitorBalloon = (markerElement, compactContent, fullContent) => {
-          const balloonContainer = document.createElement('div');
-          balloonContainer.className = 'balloon-container';
+        /* Контейнер для балунов поверх карты */
+        .balloons-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none; /* Отключаем события для overlay */
+          z-index: 1000;
+        }
+        
+        .balloon-container {
+          position: absolute;
+          pointer-events: auto; /* Включаем события для контейнеров */
+          transform: translate(-50%, -100%);
+          z-index: 1000; /* Базовый z-index */
+        }
+        
+        .balloon-container.active {
+          z-index: 10000 !important; /* Активный контейнер поверх всех */
+        }
+        
+        .balloon {
+          background: white;
+          padding: 15px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          max-width: 300px;
+          min-width: 250px;
+          font-family: Arial, sans-serif;
+          border: 2px solid #ccc;
+          position: relative;
+          margin-bottom: 10px;
+          pointer-events: auto; /* Включаем события для балунов */
+        }
+        
+        .balloon.active {
+          border-color: #999;
+        }
+        
+        /* Стрелка балуна */
+        .balloon::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border: 10px solid transparent;
+          border-top-color: #ccc;
+        }
+        
+        .balloon::before {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border: 10px solid transparent;
+          border-top-color: white;
+          margin-top: -2px;
+          z-index: 1;
+        }
+        
+        .competitor-balloon {
+          border: 2px solid #ccc;
+        }
+        
+        .competitor-balloon::after {
+          border-top-color: #ccc;
+        }
+        
+        .balloon h3 {
+          margin: 0 0 10px 0;
+          color: #333;
+          border-bottom: 1px solid #eee;
+          padding-bottom: 5px;
+        }
+        
+        .balloon p {
+          margin: 5px 0;
+          color: #666;
+        }
+        
+        .balloon strong {
+          color: #333;
+        }
+        
+        .balloon-more {
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-top: 8px;
+          font-size: 12px;
+        }
+        
+        .balloon-more:hover {
+          background: #0056b3;
+        }
+        
+        .balloon-full {
+          display: none;
+        }
+        
+        .balloon.compact .balloon-full {
+          display: none;
+        }
+        
+        .balloon.expanded .balloon-compact {
+          display: none;
+        }
+        
+        .balloon.expanded .balloon-full {
+          display: block;
+        }
+        
+        /* Стили маркеров */
+        .pin-marker {
+          width: 34px;
+          height: 34px;
+          cursor: pointer;
+          transform: translate(-17px, -34px);
+        }
+        
+        .pin-marker.green svg {
+          fill: seagreen;
+        }
+        
+        .pin-marker.red svg {
+          fill: orangered;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <div class="balloons-overlay" id="balloonsOverlay"></div>
+  
+      <script>
+        const counterpartyData = ${JSON.stringify(data)};
+        
+        ymaps3.ready.then(() => {
+          const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
           
-          const balloon = document.createElement('div');
-          balloon.className = 'balloon competitor-balloon compact';
-          balloon.innerHTML = \`
-            <div class="balloon-compact">
-              \${compactContent}
-              <button class="balloon-more" onclick="this.closest('.balloon').classList.remove('compact'); this.closest('.balloon').classList.add('expanded');">▼ Подробнее</button>
-            </div>
-            <div class="balloon-full">
-              \${fullContent}
-              <button class="balloon-more" onclick="this.closest('.balloon').classList.remove('expanded'); this.closest('.balloon').classList.add('compact');">▲ Свернуть</button>
-            </div>
-          \`;
+          let center = [37.64, 55.76]
+          const zoom = 14
           
-          balloonContainer.appendChild(balloon);
-          document.getElementById('map').appendChild(balloonContainer);
-          
-          competitorBalloons.set(markerElement, balloonContainer);
-          updateBalloonPosition(markerElement, balloonContainer);
-          
-          return balloonContainer;
-        };
-
-        // Функция для создания маркера
-        const createPinMarker = (coordinates, colorClass, title, isCompetitor = false, compactContent = '', fullContent = '') => {
-          const markerElement = document.createElement('div');
-          markerElement.className = \`pin-marker \${colorClass}\`;
-          
-          markerElement.innerHTML = \`
-            <svg width="34" height="34" viewBox="0 0 34 34">
-              <path d="M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z"/>
-              <circle cx="17" cy="12" r="5" fill="white"/>
-            </svg>
-          \`;
-          
-          markerElement.title = title;
-          
-          const marker = new YMapMarker({ coordinates }, markerElement);
-
-          // Для конкурентов создаем автоматический балун
-          if (isCompetitor) {
-            setTimeout(() => {
-              createCompetitorBalloon(markerElement, compactContent, fullContent);
-            }, 100);
+          if (counterpartyData.latitude && counterpartyData.longitude) {
+            center = [counterpartyData.longitude, counterpartyData.latitude];
           } else {
-            // Для контрагента добавляем обработчик клика
-            markerElement.addEventListener('click', (event) => {
-              event.stopPropagation();
-              
-              if (activeMarker === markerElement) {
-                closeBalloon();
-                return;
+            const firstCompetitor = counterpartyData.competitors?.find(c => c.latitude && c.longitude);
+            if (firstCompetitor) {
+              center = [firstCompetitor.longitude, firstCompetitor.latitude];
+            } 
+          }
+          
+          const map = new YMap(
+            document.getElementById('map'),
+            {
+              location: {
+                center,
+                zoom
               }
+            },
+            [
+              new YMapDefaultSchemeLayer({}),
+              new YMapDefaultFeaturesLayer({})
+            ]
+          );
+  
+          const balloonsOverlay = document.getElementById('balloonsOverlay');
+          let currentActiveContainer = null;
+          const balloonContainers = new Map();
+          let updateInterval = null;
+  
+          // Функция для обновления позиции балуна
+          const updateBalloonPosition = (markerElement, balloonContainer) => {
+            if (!markerElement || !balloonContainer) return;
+            
+            const rect = markerElement.getBoundingClientRect();
+            const mapRect = document.getElementById('map').getBoundingClientRect();
+            
+            if (rect && mapRect) {
+              const markerCenterX = rect.left - mapRect.left + rect.width / 2;
+              balloonContainer.style.left = markerCenterX + 'px';
+              balloonContainer.style.top = (rect.top - mapRect.top + 15) + 'px';
+            }
+          };
+  
+          // Функция для обновления всех позиций балунов
+          const updateAllBalloonPositions = () => {
+            balloonContainers.forEach((data, markerElement) => {
+              updateBalloonPosition(markerElement, data.container);
+            });
+          };
+  
+          // Функция для активации балуна
+          const activateBalloon = (container, balloon) => {
+            console.log('Активируем балун');
+            
+            // Снимаем активность с предыдущего контейнера
+            if (currentActiveContainer && currentActiveContainer !== container) {
+              currentActiveContainer.classList.remove('active');
+              currentActiveContainer.querySelector('.balloon').classList.remove('active');
+              console.log('Сняли активность с предыдущего балуна');
+            }
+            
+            // Активируем новый контейнер и балун
+            container.classList.add('active');
+            balloon.classList.add('active');
+            currentActiveContainer = container;
+            console.log('Новый активный балун установлен');
+          };
+  
+          // Функция для создания балуна
+          const createBalloon = (coordinates, content, isCompetitor = false) => {
+            const balloonContainer = document.createElement('div');
+            balloonContainer.className = 'balloon-container';
+            
+            const balloon = document.createElement('div');
+            balloon.className = \`balloon \${isCompetitor ? 'competitor-balloon compact' : ''}\`;
+            balloon.innerHTML = content;
+            
+            balloonContainer.appendChild(balloon);
+            balloonsOverlay.appendChild(balloonContainer);
+            
+            // Для конкурентов сразу показываем балун
+            if (isCompetitor) {
+              balloonContainer.style.display = 'block';
+            } else {
+              balloonContainer.style.display = 'none';
+            }
+            
+            // Обработчик клика на балун
+            balloon.addEventListener('click', (e) => {
+              e.stopPropagation();
+              console.log('Клик по балуну');
+              activateBalloon(balloonContainer, balloon);
               
-              closeBalloon();
+              if (e.target.classList.contains('balloon-more')) {
+                balloon.classList.toggle('compact');
+                balloon.classList.toggle('expanded');
+              }
+            });
+            
+            // Обработчик клика на контейнер (на случай пустых областей)
+            balloonContainer.addEventListener('click', (e) => {
+              e.stopPropagation();
+              console.log('Клик по контейнеру балуна');
+              activateBalloon(balloonContainer, balloon);
+            });
+            
+            return { container: balloonContainer, balloon: balloon };
+          };
+  
+          // Функция для создания маркера
+          const createPinMarker = (coordinates, colorClass, title, balloonData = null) => {
+            const markerElement = document.createElement('div');
+            markerElement.className = \`pin-marker \${colorClass}\`;
+            
+            markerElement.innerHTML = \`
+              <svg width="34" height="34" viewBox="0 0 34 34">
+                <path d="M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z"/>
+                <circle cx="17" cy="12" r="5" fill="white"/>
+              </svg>
+            \`;
+            
+            markerElement.title = title;
+  
+            const marker = new YMapMarker({ coordinates }, markerElement);
+            
+            // Если есть данные для балуна - создаем его
+            if (balloonData) {
+              const { container, balloon } = createBalloon(
+                coordinates, 
+                balloonData.content, 
+                balloonData.isCompetitor
+              );
               
-              const balloonContainer = document.createElement('div');
-              balloonContainer.className = 'balloon-container';
+              balloonContainers.set(markerElement, { container, balloon, coordinates });
               
-              const balloonContent = \`
-                <div class="balloon">
-                  <h3>🎯 Новый клиент</h3>
-                  <p><strong>Телефон:</strong> \${counterpartyData.phone || '-'}</p>
-                  <p><strong>Менеджер:</strong> \${counterpartyData.manager}</p>
-                  <p><strong>Адрес:</strong> \${counterpartyData.address}</p>
-                  <br/>
-                  <p><strong>Цена:</strong> \${counterpartyData.price}</p>
-                </div>
-              \`;
+              // Обработчик клика на маркер
+              markerElement.addEventListener('click', (event) => {
+                event.stopPropagation();
+                console.log('Клик по маркеру', colorClass);
+                
+                if (balloonData.isCompetitor) {
+                  // Для конкурентов активируем балун
+                  activateBalloon(container, balloon);
+                } else {
+                  // Для контрагента показываем/скрываем балун
+                  const isVisible = container.style.display === 'block';
+                  container.style.display = isVisible ? 'none' : 'block';
+                  if (!isVisible) {
+                    activateBalloon(container, balloon);
+                  }
+                }
+              });
               
-              balloonContainer.innerHTML = balloonContent;
-              document.getElementById('map').appendChild(balloonContainer);
-              
-              competitorBalloons.set(markerElement, balloonContainer);
-              updateBalloonPosition(markerElement, balloonContainer);
-              
-              activeBalloon = balloonContainer;
-              activeMarker = markerElement;
+              // Изначальное позиционирование
+              setTimeout(() => {
+                updateBalloonPosition(markerElement, container);
+              }, 100);
+            }
+  
+            return marker;
+          };
+  
+          // Добавляем контрагента
+          if (counterpartyData.latitude && counterpartyData.longitude) {
+            const counterpartyContent = \`
+              <h3>🎯 Новый клиент</h3>
+              <p><strong>Телефон:</strong> \${counterpartyData.phone || '-'}</p>
+              <p><strong>Менеджер:</strong> \${counterpartyData.manager}</p>
+              <p><strong>Адрес:</strong> \${counterpartyData.address}</p>
+              <br/>
+              <p><strong>Цена:</strong> \${counterpartyData.price}</p>
+            \`;
+            
+            const counterpartyMarker = createPinMarker(
+              [counterpartyData.longitude, counterpartyData.latitude],
+              'green',
+              'Контрагент: Новый клиент',
+              {
+                content: counterpartyContent,
+                isCompetitor: false
+              }
+            );
+            map.addChild(counterpartyMarker);
+            
+            // Автоматически открываем балун контрагента
+            setTimeout(() => {
+              const balloonData = balloonContainers.get(counterpartyMarker.element);
+              if (balloonData) {
+                balloonData.container.style.display = 'block';
+                activateBalloon(balloonData.container, balloonData.balloon);
+                console.log('Автоматически открыт балун контрагента');
+              }
+            }, 1000);
+          }
+  
+          // Добавляем конкурентов
+          if (counterpartyData.competitors && counterpartyData.competitors.length > 0) {
+            counterpartyData.competitors.forEach((competitor) => {
+              if (competitor.latitude && competitor.longitude) {
+                const competitorCompactContent = \`
+                  <div class="balloon-compact">
+                    <p><strong>\${competitor.name}</strong></p>
+                    <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
+                    <p><strong>Цена:</strong> \${competitor.price}</p>
+                    <p><strong>Оборот:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
+                    <button class="balloon-more">▼ Подробнее</button>
+                  </div>
+                  <div class="balloon-full">
+                    <h3>⚡ Конкурент</h3>
+                    <p><strong>Название:</strong> \${competitor.name}</p>
+                    <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
+                    <p><strong>Телефон:</strong> \${competitor.phone || '-'}</p>
+                    <p><strong>Менеджер:</strong> \${competitor.manager || '-'}</p>
+                    <p><strong>Адрес:</strong> \${competitor.address || '-'}</p>
+                    <br/>
+                    <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
+                    <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
+                    <p><strong>Последняя продажа:</strong> \${competitor.last_sale_date || '-'}</p>
+                    <button class="balloon-more">▲ Свернуть</button>
+                  </div>
+                \`;
+                
+                const competitorMarker = createPinMarker(
+                  [competitor.longitude, competitor.latitude],
+                  'red',
+                  'Конкурент: ' + competitor.name,
+                  {
+                    content: competitorCompactContent,
+                    isCompetitor: true
+                  }
+                );
+                map.addChild(competitorMarker);
+              }
             });
           }
-          
-          return marker;
-        };
-
-        const markers = [];
-
-        // Добавляем контрагента - ПРИОРИТЕТНЫЙ МАРКЕР
-        if (counterpartyData.latitude && counterpartyData.longitude) {
-          const counterpartyMarker = createPinMarker(
-            [counterpartyData.longitude, counterpartyData.latitude],
-            'green',
-            'Контрагент: Новый клиент',
-            false
-          );
-          map.addChild(counterpartyMarker);
-          markers.push([counterpartyData.longitude, counterpartyData.latitude]);
-          
-          // Автоматически открываем балун контрагента
+  
+          // Запускаем интервал для обновления позиций балунов
           setTimeout(() => {
-            if (counterpartyMarker && counterpartyMarker.element) {
-              counterpartyMarker.element.click();
-            }
-          }, 1000);
-        }
-
-        // Добавляем конкурентов
-        if (counterpartyData.competitors && counterpartyData.competitors.length > 0) {
-          counterpartyData.competitors.forEach((competitor) => {
-            if (competitor.latitude && competitor.longitude) {
-              const competitorCompactContent = \`
-                <p><strong> \${competitor.name}</strong></p>
-                <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
-                <p><strong>Цена:</strong> \${competitor.price}</p>
-                <p><strong>Оборот:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
-              \`;
+            updateInterval = setInterval(updateAllBalloonPositions, 100);
+          }, 100);
+  
+          // Закрываем балун контрагента при клике на карту
+          document.getElementById('map').addEventListener('click', (e) => {
+            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker')) {
+              console.log('Клик по карте - скрываем балуны');
               
-              const competitorFullContent = \`
-                <h3>⚡ Конкурент</h3>
-                <p><strong>Название:</strong> \${competitor.name}</p>
-                <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
-                <p><strong>Телефон:</strong> \${competitor.phone}</p>
-                <p><strong>Менеджер:</strong> \${competitor.manager}</p>
-                <p><strong>Адрес:</strong> \${competitor.address}</p>
-                <br/>
-                <p><strong>Цена:</strong> \${competitor.price}</p>
-                <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
-                <p><strong>Последняя продажа:</strong> \${competitor.last_sale_date || "-"}</p>
-              \`;
+              // Скрываем все балуны контрагентов
+              balloonContainers.forEach((data, markerElement) => {
+                if (markerElement.classList.contains('green')) {
+                  data.container.style.display = 'none';
+                }
+              });
               
-              const competitorMarker = createPinMarker(
-                [competitor.longitude, competitor.latitude],
-                'red',
-                'Конкурент: ' + competitor.name,
-                true,
-                competitorCompactContent,
-                competitorFullContent
-              );
-              map.addChild(competitorMarker);
-              markers.push([competitor.longitude, competitor.latitude]);
+              // Снимаем активность со всех балунов
+              if (currentActiveContainer) {
+                currentActiveContainer.classList.remove('active');
+                currentActiveContainer.querySelector('.balloon').classList.remove('active');
+                currentActiveContainer = null;
+              }
             }
           });
-        }
-
-        // Закрываем балун при клике на карту
-        document.getElementById('map').addEventListener('click', (e) => {
-          if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker')) {
-            closeBalloon();
-          }
+          
+          // Обновляем позиции балунов при ресайзе
+          window.addEventListener('resize', () => {
+            updateAllBalloonPositions();
+          });
+          
+        }).catch(error => {
+          console.error('Ошибка загрузки Яндекс Карт:', error);
+          document.getElementById('map').innerHTML = 
+            '<div style="padding: 20px; text-align: center;"><h3>Ошибка загрузки карты</h3><p>' + error.message + '</p></div>';
         });
-
-        // Обновляем позиции балунов
-        setInterval(updateAllBalloonPositions, 100);
-
-        
-        
-      }).catch(error => {
-        console.error('Ошибка загрузки Яндекс Карт:', error);
-        document.getElementById('map').innerHTML = 
-          '<div style="padding: 20px; text-align: center;"><h3>Ошибка загрузки карты</h3><p>' + error.message + '</p></div>';
-      });
-    </script>
-  </body>
-</html>
-    `
+      </script>
+    </body>
+  </html>
+      `
   }
 
   private static generateOSMMapHTML(
