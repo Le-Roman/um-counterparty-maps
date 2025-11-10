@@ -38,19 +38,19 @@ export const initCounterpartyModel = (
       },
       price: {
         type: DataTypes.STRING(255),
-        allowNull: false,
       },
       latitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
       },
       longitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
       },
       address: {
         type: DataTypes.TEXT,
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
       },
       phone: {
         type: DataTypes.STRING(50),

@@ -44,12 +44,12 @@ export const validateMapData = (
   //     }
   //   }
 
-  if (typeof data.latitude !== 'number') {
-    return res.status(400).json({
-      success: false,
-      error: 'Поле latitude обязательно и должно быть числом',
-    })
-  }
+  //   if (typeof data.latitude !== 'number') {
+  //     return res.status(400).json({
+  //       success: false,
+  //       error: 'Поле latitude обязательно и должно быть числом',
+  //     })
+  //   }
 
   //   if (!data.longitude !== null && data.longitude !== undefined) {
   //     if (
@@ -64,12 +64,12 @@ export const validateMapData = (
   //     }
   //   }
 
-  if (typeof data.longitude !== 'number') {
-    return res.status(400).json({
-      success: false,
-      error: 'Поле longitude обязательно и должно быть числом от',
-    })
-  }
+  //   if (typeof data.longitude !== 'number') {
+  //     return res.status(400).json({
+  //       success: false,
+  //       error: 'Поле longitude обязательно и должно быть числом от',
+  //     })
+  //   }
 
   // Проверка конкурентов
   if (data.competitors && !Array.isArray(data.competitors)) {
@@ -101,15 +101,15 @@ export const validateMapData = (
       //     })
       //   }
 
-      if (typeof competitor.last_sale_date === 'string') {
-        const saleDate = new Date(competitor.last_sale_date)
-        if (isNaN(saleDate.getTime())) {
-          return res.status(400).json({
-            success: false,
-            error: `Competitor[${i}]: поле last_sale_date должно быть валидной датой`,
-          })
-        }
-      }
+      //   if (typeof competitor.last_sale_date === 'string') {
+      //     const saleDate = new Date(competitor.last_sale_date)
+      //     if (isNaN(saleDate.getTime())) {
+      //       return res.status(400).json({
+      //         success: false,
+      //         error: `Competitor[${i}]: поле last_sale_date должно быть валидной датой`,
+      //       })
+      //     }
+      //   }
     }
   }
 

@@ -58,44 +58,35 @@ export const initCompetitorModel = (
       },
       price: {
         type: DataTypes.STRING(255),
-        allowNull: false,
       },
       revenue_last_3_months: {
         type: DataTypes.DECIMAL(15, 2),
-        allowNull: false,
         validate: {
           min: 0,
         },
       },
       relationship_type: {
         type: DataTypes.STRING(100),
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-        },
       },
       last_sale_date: {
         type: DataTypes.STRING(100),
-        allowNull: false,
         get() {
           const rawValue = this.getDataValue('last_sale_date')
           return rawValue ? moment(rawValue).format('DD.MM.YYYY') : null
         },
-        validate: {
-          isDate: true,
-        },
       },
       latitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
       },
       longitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
       },
       address: {
         type: DataTypes.TEXT,
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
       },
       phone: {
         type: DataTypes.STRING(50),
