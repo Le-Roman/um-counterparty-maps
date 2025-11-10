@@ -40,7 +40,7 @@ app.use('/maps', cors(corsOptions))
 app.use('/api', cors(apiCorsOptions))
 
 // Rate limiting
-app.use('/api', rateLimit(15 * 60 * 1000, 1000))
+// app.use('/api', rateLimit(15 * 60 * 1000, 1000))
 
 // Security
 app.use(protectApiEndpoints)
