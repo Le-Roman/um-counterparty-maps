@@ -18,7 +18,8 @@ router.post(
   validateMapData,
   async (req: AuthenticatedRequest, res) => {
     try {
-      const mapData = req.body as MapRequestData
+      const originalData = req.body as MapRequestData
+      const mapData = { ...originalData }
 
       // Собираем все элементы для геокодирования
       const itemsToGeocode: Array<{ item: any; address: string }> = []
@@ -76,14 +77,14 @@ router.post(
       }
 
       const fixedCoordinatesEntities = getFixedCoordinatesEntities(
-        [mapData, ...mapData.competitors],
+        [originalData, ...originalData.competitors],
         result.data ? [result.data, ...(result.data.competitors || [])] : []
       )
 
-      console.log("Обработка координат", {
-        externalData: mapData,
+      console.log('Обработка координат', {
+        externalData: originalData,
         geocodedData: result.data,
-        fixedCoordinates: fixedCoordinatesEntities 
+        fixedCoordinates: fixedCoordinatesEntities,
       })
 
       const response = {
