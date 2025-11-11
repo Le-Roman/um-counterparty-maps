@@ -5,7 +5,10 @@ import { AuthenticatedRequest } from '../middleware/security'
 import { amqpService } from '../services/amqp.service'
 import { MapRequestData, Queue } from '../types'
 import { geocodeAddress } from '../services/geocoding.service'
-import { needsGeocoding } from '../utils/coordinates'
+import {
+  getFixedCoordinatesEntities,
+  needsGeocoding,
+} from '../utils/coordinates'
 import { processWithConcurrency } from '../utils/processWithConcurrency'
 
 const router = Router()
@@ -72,6 +75,11 @@ router.post(
         })
       }
 
+      const fixedCoordinatesEntities = getFixedCoordinatesEntities(
+        [{ ...mapData }, ...mapData.competitors],
+        result.data ? [result.data, ...(result.data.competitors || [])] : []
+      )
+
       const response = {
         success: true,
         action: 'created',
@@ -84,9 +92,13 @@ router.post(
           counterparty: result.data,
           competitorsCount: result.data?.competitors?.length || 0,
         },
+        fixedCoordinates: fixedCoordinatesEntities,
       }
 
-      if (process.env.ALLOW_EXTERNAL_API === 'true') {
+      if (
+        fixedCoordinatesEntities.length &&
+        process.env.ALLOW_EXTERNAL_API === 'true'
+      ) {
         // @ts-ignore
         const channel = await amqpService.connect()
 
@@ -96,6 +108,7 @@ router.post(
           JSON.stringify({
             guid: response.guid,
             url: response.mapUrl,
+            data: fixedCoordinatesEntities,
           })
         )
       }

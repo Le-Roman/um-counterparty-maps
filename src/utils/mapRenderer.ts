@@ -12,7 +12,6 @@ export class MapRenderer {
       return this.generateOSMMapHTML(guid, data)
     }
   }
-
   private static generateYandexMapHTML(
     guid: string,
     data: CounterpartyInstance
@@ -49,19 +48,19 @@ export class MapRenderer {
           left: 0;
           width: 100%;
           height: 100%;
-          pointer-events: none; /* Отключаем события для overlay */
+          pointer-events: none;
           z-index: 1000;
         }
         
         .balloon-container {
           position: absolute;
-          pointer-events: auto; /* Включаем события для контейнеров */
+          pointer-events: auto;
           transform: translate(-50%, -100%);
-          z-index: 1000; /* Базовый z-index */
+          z-index: 1000;
         }
         
         .balloon-container.active {
-          z-index: 10000 !important; /* Активный контейнер поверх всех */
+          z-index: 10000 !important;
         }
         
         .balloon {
@@ -75,7 +74,7 @@ export class MapRenderer {
           border: 2px solid #ccc;
           position: relative;
           margin-bottom: 10px;
-          pointer-events: auto; /* Включаем события для балунов */
+          pointer-events: auto;
         }
         
         .balloon.active {
@@ -175,6 +174,37 @@ export class MapRenderer {
         .pin-marker.red svg {
           fill: orangered;
         }
+        
+        /* Информационный блок */
+        .info-panel {
+          position: absolute;
+          top: 15px;
+          left: 15px;
+          background: rgba(60, 60, 60, 0.8);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          line-height: 1.4;
+          z-index: 100000;
+          backdrop-filter: blur(2px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-panel p {
+          margin: 0;
+        }
+        
+        .info-panel .total {
+          font-weight: bold;
+        }
+          
+        .info-panel .unmarked {
+          color: #ff6b6b;
+          font-weight: bold;
+        }
       </style>
     </head>
     <body>
@@ -183,6 +213,11 @@ export class MapRenderer {
   
       <script>
         const counterpartyData = ${JSON.stringify(data)};
+
+        // Подсчет статистики конкурентов
+        const totalCompetitors = counterpartyData.competitors ? counterpartyData.competitors.length : 0;
+        const unmarkedCompetitors = counterpartyData.competitors ? 
+          counterpartyData.competitors.filter(c => c.longitude === 0 && c.latitude === 0).length : 0;
         
         ymaps3.ready.then(() => {
           const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
@@ -212,6 +247,23 @@ export class MapRenderer {
               new YMapDefaultFeaturesLayer({})
             ]
           );
+
+          // Создаем информационную панель
+          const infoPanel = document.createElement('div');
+          infoPanel.className = 'info-panel';
+          
+          if (unmarkedCompetitors > 0) {
+            infoPanel.innerHTML = \`
+              <p class="total">Всего конкурентов: \${totalCompetitors}</p>
+              <p class="unmarked">Не отмечены: \${unmarkedCompetitors}</p>
+            \`;
+          } else {
+            infoPanel.innerHTML = \`
+              <p class="total">Всего конкурентов: \${totalCompetitors}</p>
+            \`;
+          }
+          
+          document.getElementById('map').appendChild(infoPanel);
   
           const balloonsOverlay = document.getElementById('balloonsOverlay');
           let currentActiveContainer = null;
@@ -384,10 +436,11 @@ export class MapRenderer {
             }, 1000);
           }
   
-          // Добавляем конкурентов
+          // Добавляем конкурентов (только тех, у кого есть координаты и они не равны 0)
           if (counterpartyData.competitors && counterpartyData.competitors.length > 0) {
             counterpartyData.competitors.forEach((competitor) => {
-              if (competitor.latitude && competitor.longitude) {
+              if (competitor.latitude && competitor.longitude && 
+                  competitor.latitude !== 0 && competitor.longitude !== 0) {
                 const competitorCompactContent = \`
                   <div class="balloon-compact">
                     <p><strong>\${competitor.name}</strong></p>
@@ -432,7 +485,7 @@ export class MapRenderer {
   
           // Закрываем балун контрагента при клике на карту
           document.getElementById('map').addEventListener('click', (e) => {
-            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker')) {
+            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker') && !e.target.closest('.info-panel')) {
               console.log('Клик по карте - скрываем балуны');
               
               // Скрываем все балуны контрагентов
