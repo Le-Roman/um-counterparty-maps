@@ -57,7 +57,11 @@ export const getFixedCoordinatesEntities = (
       hasValidCoordinates(geocodedEntity) &&
       geocodedEntity.address
     ) {
-      result.push(geocodedEntity)
+      result.push({
+        latitude: geocodedEntity.latitude,
+        longitude: geocodedEntity.longitude,
+        address: geocodedEntity.address,
+      })
     }
   })
 
