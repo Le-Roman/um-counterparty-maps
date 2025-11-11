@@ -81,12 +81,6 @@ router.post(
         result.data ? [result.data, ...(result.data.competitors || [])] : []
       )
 
-      console.log('Обработка координат', {
-        externalData: originalData,
-        geocodedData: result.data,
-        fixedCoordinates: fixedCoordinatesEntities,
-      })
-
       const response = {
         success: true,
         action: 'created',
