@@ -26,33 +26,33 @@ export class MapRenderer {
         process.env.YANDEX_API_KEY
       }&lang=ru_RU"></script>
       <style>
-        html {
-          height: 100%;
-          overflow: hidden; /* Предотвращаем скролл страницы */
-        }
-        body {
+        html, body {
           height: 100%;
           margin: 0;
+          padding: 0;
           font-family: Arial, sans-serif;
-          overflow: hidden; /* Предотвращаем скролл body */
-        }
-        #map {
-          width: 100%;
-          height: 100%;
-          position: relative;
-          overflow: hidden; /* Убираем скролл у карты */
+          overflow: hidden; /* Полностью убираем скролл */
         }
         
-        /* Контейнер для балунов поверх карты - ФИКС */
-        .balloons-overlay {
-          position: absolute;
+        #map {
+          width: 100vw; /* Занимает всю ширину viewport */
+          height: 100vh; /* Занимает всю высоту viewport */
+          position: fixed; /* Фиксированное позиционирование */
           top: 0;
           left: 0;
-          width: 100%;
-          height: 100%;
+          overflow: hidden;
+        }
+        
+        /* Контейнер для балунов поверх карты */
+        .balloons-overlay {
+          position: fixed; /* Меняем на fixed */
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
           pointer-events: none;
           z-index: 1000;
-          overflow: visible; /* Разрешаем балунам выходить за пределы */
+          overflow: visible;
         }
         
         .balloon-container {
@@ -180,7 +180,7 @@ export class MapRenderer {
         
         /* Информационный блок */
         .info-panel {
-          position: absolute;
+          position: fixed; /* Меняем на fixed */
           top: 15px;
           left: 15px;
           background: rgba(60, 60, 60, 0.8);
@@ -266,7 +266,7 @@ export class MapRenderer {
             \`;
           }
           
-          document.getElementById('map').appendChild(infoPanel);
+          document.body.appendChild(infoPanel); // Добавляем в body, а не в map
   
           const balloonsOverlay = document.getElementById('balloonsOverlay');
           let currentActiveContainer = null;
@@ -275,23 +275,21 @@ export class MapRenderer {
 
           // Функция для получения абсолютных координат маркера
           const getMarkerScreenPosition = (markerElement) => {
-            const mapElement = document.getElementById('map');
             const markerRect = markerElement.getBoundingClientRect();
-            const mapRect = mapElement.getBoundingClientRect();
             
             return {
-              x: markerRect.left - mapRect.left + markerRect.width / 2,
-              y: markerRect.top - mapRect.top
+              x: markerRect.left + markerRect.width / 2,
+              y: markerRect.top
             };
           };
 
-          // Функция для обновления позиции балуна - УЛУЧШЕННАЯ
+          // Функция для обновления позиции балуна
           const updateBalloonPosition = (markerElement, balloonContainer) => {
             if (!markerElement || !balloonContainer) return;
             
             const position = getMarkerScreenPosition(markerElement);
             balloonContainer.style.left = position.x + 'px';
-            balloonContainer.style.top = (position.y - 10) + 'px'; // Немного выше маркера
+            balloonContainer.style.top = (position.y - 10) + 'px';
           };
   
           // Функция для обновления всех позиций балунов
@@ -305,18 +303,14 @@ export class MapRenderer {
           const activateBalloon = (container, balloon) => {
             console.log('Активируем балун');
             
-            // Снимаем активность с предыдущего контейнера
             if (currentActiveContainer && currentActiveContainer !== container) {
               currentActiveContainer.classList.remove('active');
               currentActiveContainer.querySelector('.balloon').classList.remove('active');
-              console.log('Сняли активность с предыдущего балуна');
             }
             
-            // Активируем новый контейнер и балун
             container.classList.add('active');
             balloon.classList.add('active');
             currentActiveContainer = container;
-            console.log('Новый активный балун установлен');
           };
   
           // Функция для создания балуна
@@ -331,17 +325,14 @@ export class MapRenderer {
             balloonContainer.appendChild(balloon);
             balloonsOverlay.appendChild(balloonContainer);
             
-            // Для конкурентов сразу показываем балун
             if (isCompetitor) {
               balloonContainer.style.display = 'block';
             } else {
               balloonContainer.style.display = 'none';
             }
             
-            // Обработчик клика на балун
             balloon.addEventListener('click', (e) => {
               e.stopPropagation();
-              console.log('Клик по балуну');
               activateBalloon(balloonContainer, balloon);
               
               if (e.target.classList.contains('balloon-more')) {
@@ -350,10 +341,8 @@ export class MapRenderer {
               }
             });
             
-            // Обработчик клика на контейнер (на случай пустых областей)
             balloonContainer.addEventListener('click', (e) => {
               e.stopPropagation();
-              console.log('Клик по контейнеру балуна');
               activateBalloon(balloonContainer, balloon);
             });
             
@@ -376,7 +365,6 @@ export class MapRenderer {
   
             const marker = new YMapMarker({ coordinates }, markerElement);
             
-            // Если есть данные для балуна - создаем его
             if (balloonData) {
               const { container, balloon } = createBalloon(
                 coordinates, 
@@ -386,16 +374,12 @@ export class MapRenderer {
               
               balloonContainers.set(markerElement, { container, balloon, coordinates });
               
-              // Обработчик клика на маркер
               markerElement.addEventListener('click', (event) => {
                 event.stopPropagation();
-                console.log('Клик по маркеру', colorClass);
                 
                 if (balloonData.isCompetitor) {
-                  // Для конкурентов активируем балун
                   activateBalloon(container, balloon);
                 } else {
-                  // Для контрагента показываем/скрываем балун
                   const isVisible = container.style.display === 'block';
                   container.style.display = isVisible ? 'none' : 'block';
                   if (!isVisible) {
@@ -404,7 +388,6 @@ export class MapRenderer {
                 }
               });
               
-              // Изначальное позиционирование
               setTimeout(() => {
                 updateBalloonPosition(markerElement, container);
               }, 100);
@@ -435,18 +418,16 @@ export class MapRenderer {
             );
             map.addChild(counterpartyMarker);
             
-            // Автоматически открываем балун контрагента
             setTimeout(() => {
               const balloonData = balloonContainers.get(counterpartyMarker.element);
               if (balloonData) {
                 balloonData.container.style.display = 'block';
                 activateBalloon(balloonData.container, balloonData.balloon);
-                console.log('Автоматически открыт балун контрагента');
               }
             }, 1000);
           }
   
-          // Добавляем конкурентов (только тех, у кого есть координаты и они не равны 0)
+          // Добавляем конкурентов
           if (counterpartyData.competitors && counterpartyData.competitors.length > 0) {
             counterpartyData.competitors.forEach((competitor) => {
               if (competitor.latitude && competitor.longitude && 
@@ -492,26 +473,16 @@ export class MapRenderer {
           setTimeout(() => {
             updateInterval = setInterval(updateAllBalloonPositions, 100);
           }, 100);
-
-          // Обработчик изменения размера карты
-          const observer = new ResizeObserver(() => {
-            updateAllBalloonPositions();
-          });
-          observer.observe(document.getElementById('map'));
   
           // Закрываем балун контрагента при клике на карту
           document.getElementById('map').addEventListener('click', (e) => {
             if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker') && !e.target.closest('.info-panel')) {
-              console.log('Клик по карте - скрываем балуны');
-              
-              // Скрываем все балуны контрагентов
               balloonContainers.forEach((data, markerElement) => {
                 if (markerElement.classList.contains('green')) {
                   data.container.style.display = 'none';
                 }
               });
               
-              // Снимаем активность со всех балунов
               if (currentActiveContainer) {
                 currentActiveContainer.classList.remove('active');
                 currentActiveContainer.querySelector('.balloon').classList.remove('active');
@@ -520,22 +491,17 @@ export class MapRenderer {
             }
           });
           
-          // Обновляем позиции балунов при ресайзе
-          window.addEventListener('resize', () => {
-            updateAllBalloonPositions();
-          });
+          window.addEventListener('resize', updateAllBalloonPositions);
 
-          // Очистка при размонтировании
           window.addEventListener('beforeunload', () => {
             if (updateInterval) {
               clearInterval(updateInterval);
             }
-            observer.disconnect();
           });
           
         }).catch(error => {
           console.error('Ошибка загрузки Яндекс Карт:', error);
-          document.getElementById('map').innerHTML = 
+          document.body.innerHTML = 
             '<div style="padding: 20px; text-align: center;"><h3>Ошибка загрузки карты</h3><p>' + error.message + '</p></div>';
         });
       </script>
