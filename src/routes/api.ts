@@ -76,7 +76,7 @@ router.post(
       }
 
       const fixedCoordinatesEntities = getFixedCoordinatesEntities(
-        [{ ...mapData }, ...mapData.competitors],
+        [mapData, ...mapData.competitors],
         result.data ? [result.data, ...(result.data.competitors || [])] : []
       )
 
@@ -91,8 +91,8 @@ router.post(
         data: {
           counterparty: result.data,
           competitorsCount: result.data?.competitors?.length || 0,
+          fixedCoordinates: fixedCoordinatesEntities,
         },
-        fixedCoordinates: fixedCoordinatesEntities,
       }
 
       if (
@@ -108,7 +108,7 @@ router.post(
           JSON.stringify({
             guid: response.guid,
             url: response.mapUrl,
-            data: fixedCoordinatesEntities,
+            data: response.data.fixedCoordinates,
           })
         )
       }
