@@ -19,7 +19,7 @@ router.post(
   async (req: AuthenticatedRequest, res) => {
     try {
       const originalData = req.body as MapRequestData
-      const mapData = { ...originalData }
+      const mapData = structuredClone(originalData)
 
       // Собираем все элементы для геокодирования
       const itemsToGeocode: Array<{ item: any; address: string }> = []
