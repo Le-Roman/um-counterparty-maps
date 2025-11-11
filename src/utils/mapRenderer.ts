@@ -28,20 +28,22 @@ export class MapRenderer {
       <style>
         html {
           height: 100%;
+          overflow: hidden; /* Предотвращаем скролл страницы */
         }
         body {
           height: 100%;
           margin: 0;
           font-family: Arial, sans-serif;
+          overflow: hidden; /* Предотвращаем скролл body */
         }
         #map {
           width: 100%;
           height: 100%;
           position: relative;
-          overflow: hidden;
+          overflow: hidden; /* Убираем скролл у карты */
         }
         
-        /* Контейнер для балунов поверх карты */
+        /* Контейнер для балунов поверх карты - ФИКС */
         .balloons-overlay {
           position: absolute;
           top: 0;
@@ -50,6 +52,7 @@ export class MapRenderer {
           height: 100%;
           pointer-events: none;
           z-index: 1000;
+          overflow: visible; /* Разрешаем балунам выходить за пределы */
         }
         
         .balloon-container {
@@ -269,19 +272,26 @@ export class MapRenderer {
           let currentActiveContainer = null;
           const balloonContainers = new Map();
           let updateInterval = null;
-  
-          // Функция для обновления позиции балуна
+
+          // Функция для получения абсолютных координат маркера
+          const getMarkerScreenPosition = (markerElement) => {
+            const mapElement = document.getElementById('map');
+            const markerRect = markerElement.getBoundingClientRect();
+            const mapRect = mapElement.getBoundingClientRect();
+            
+            return {
+              x: markerRect.left - mapRect.left + markerRect.width / 2,
+              y: markerRect.top - mapRect.top
+            };
+          };
+
+          // Функция для обновления позиции балуна - УЛУЧШЕННАЯ
           const updateBalloonPosition = (markerElement, balloonContainer) => {
             if (!markerElement || !balloonContainer) return;
             
-            const rect = markerElement.getBoundingClientRect();
-            const mapRect = document.getElementById('map').getBoundingClientRect();
-            
-            if (rect && mapRect) {
-              const markerCenterX = rect.left - mapRect.left + rect.width / 2;
-              balloonContainer.style.left = markerCenterX + 'px';
-              balloonContainer.style.top = (rect.top - mapRect.top + 15) + 'px';
-            }
+            const position = getMarkerScreenPosition(markerElement);
+            balloonContainer.style.left = position.x + 'px';
+            balloonContainer.style.top = (position.y - 10) + 'px'; // Немного выше маркера
           };
   
           // Функция для обновления всех позиций балунов
@@ -482,6 +492,12 @@ export class MapRenderer {
           setTimeout(() => {
             updateInterval = setInterval(updateAllBalloonPositions, 100);
           }, 100);
+
+          // Обработчик изменения размера карты
+          const observer = new ResizeObserver(() => {
+            updateAllBalloonPositions();
+          });
+          observer.observe(document.getElementById('map'));
   
           // Закрываем балун контрагента при клике на карту
           document.getElementById('map').addEventListener('click', (e) => {
@@ -507,6 +523,14 @@ export class MapRenderer {
           // Обновляем позиции балунов при ресайзе
           window.addEventListener('resize', () => {
             updateAllBalloonPositions();
+          });
+
+          // Очистка при размонтировании
+          window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+              clearInterval(updateInterval);
+            }
+            observer.disconnect();
           });
           
         }).catch(error => {
