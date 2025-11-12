@@ -21,7 +21,7 @@ export const createCounterpartyWorker = {
         },
       }
     )
-
+    console.log({client})
     client.setSecurity(
       new soap.BasicAuthSecurity(
         process.env.USERNAME_1C as string,
