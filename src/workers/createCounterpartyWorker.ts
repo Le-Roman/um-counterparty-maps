@@ -31,7 +31,7 @@ export const createCounterpartyWorker = {
       )
     )
 
-    await client.CashierInteractionAsync({
+    await client.CompetitorMapAsync({
       Json: message,
     })
   },
