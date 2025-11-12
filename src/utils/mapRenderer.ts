@@ -435,9 +435,8 @@ export class MapRenderer {
                 const competitorCompactContent = \`
                   <div class="balloon-compact">
                     <p><strong>\${competitor.name}</strong></p>
-                    <p><strong>Тип:</strong> \${competitor.relationship_type || '-'}</p>
                     <p><strong>Цена:</strong> \${competitor.price}</p>
-                    <p><strong>Оборот:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
+                    <p><strong>Оборот:</strong> \${competitor.formatted_revenue_last_3_months}</p>
                     <button class="balloon-more">▼ Подробнее</button>
                   </div>
                   <div class="balloon-full">
@@ -449,7 +448,7 @@ export class MapRenderer {
                     <p><strong>Адрес:</strong> \${competitor.address || '-'}</p>
                     <br/>
                     <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
-                    <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.revenue_last_3_months || '0'}р</p>
+                    <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.formatted_revenue_last_3_months}р</p>
                     <p><strong>Последняя продажа:</strong> \${competitor.last_sale_date || '-'}</p>
                     <button class="balloon-more">▲ Свернуть</button>
                   </div>

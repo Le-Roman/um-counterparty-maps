@@ -1,11 +1,17 @@
 import moment from 'moment'
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize'
 import { Competitor } from '../types'
+import { formatAmount } from '../utils/formatAmount'
 
-interface CompetitorAttributes extends Competitor {}
+interface CompetitorAttributes extends Competitor {
+  formatted_revenue_last_3_months?: string
+}
 
 interface CompetitorCreationAttributes
-  extends Optional<CompetitorAttributes, 'id' | 'latitude' | 'longitude'> {}
+  extends Optional<
+    CompetitorAttributes,
+    'id' | 'latitude' | 'longitude' | 'formatted_revenue_last_3_months'
+  > {}
 
 class CompetitorModel
   extends Model<CompetitorAttributes, CompetitorCreationAttributes>
@@ -17,6 +23,7 @@ class CompetitorModel
   public manager!: string
   public price!: string
   public revenue_last_3_months!: number
+  public formatted_revenue_last_3_months?: string
   public relationship_type!: string
   public last_sale_date!: string
   public latitude!: number
@@ -63,6 +70,22 @@ export const initCompetitorModel = (
         type: DataTypes.DECIMAL(15, 2),
         validate: {
           min: 0,
+        },
+        get() {
+          const rawValue = this.getDataValue('revenue_last_3_months')
+          if (!rawValue) return 0
+          return Math.floor(rawValue)
+        },
+      },
+      formatted_revenue_last_3_months: {
+        type: DataTypes.VIRTUAL,
+        get() {
+          const revenue = this.getDataValue('revenue_last_3_months')
+          let revenueRounded = 0
+          if (revenue) revenueRounded = Math.floor(revenue)
+          return formatAmount(revenueRounded, {
+            currency: 'RUB',
+          })
         },
       },
       relationship_type: {
