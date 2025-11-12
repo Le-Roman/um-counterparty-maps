@@ -1,6 +1,8 @@
 import { Sequelize } from 'sequelize'
 import { initCounterpartyModel } from '../models/Counterparty'
 import { initCompetitorModel } from '../models/Competitor'
+import { initYandexApiKeyModel } from '../models/YandexApiKey'
+import { initializeLimitResetScheduler } from '../utils/limitResetScheduler'
 
 const sequelize = new Sequelize(
   process.env.DB_NAME || 'maps_db',
@@ -16,6 +18,7 @@ const sequelize = new Sequelize(
       acquire: 30000,
       idle: 10000,
     },
+    timezone: '+03:00', // Московское время
   }
 )
 
@@ -25,6 +28,7 @@ export const initializeDatabase = async (): Promise<void> => {
     // Инициализация моделей
     const Counterparty = initCounterpartyModel(sequelize)
     const Competitor = initCompetitorModel(sequelize)
+    const YandexApiKey = initYandexApiKeyModel(sequelize)
 
     // Настройка связей
     Counterparty.hasMany(Competitor, {
@@ -46,6 +50,10 @@ export const initializeDatabase = async (): Promise<void> => {
     console.error('❌ Ошибка подключения к БД:', error)
     throw error
   }
+}
+
+export const initializeSchedulers = (): void => {
+  initializeLimitResetScheduler()
 }
 
 export default sequelize

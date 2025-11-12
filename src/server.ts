@@ -4,26 +4,36 @@ import dotenv from 'dotenv'
 
 // Config
 dotenv.config()
-import { initializeDatabase } from './config/database'
+import { initializeDatabase, initializeSchedulers } from './config/database'
 import { corsOptions, apiCorsOptions } from './config/cors'
 
 // Middleware
-import {
-  requestLogger,
-  protectApiEndpoints,
-  rateLimit,
-} from './middleware/security'
+import { requestLogger, protectApiEndpoints } from './middleware/security'
 
 // Routes
 import routes from './routes'
 import { queueService } from './services/queueService'
+import { ApiKeyManager } from './utils/apiKeyManager'
 
 const app = express()
 const PORT = process.env.PORT || 3000
 const HOST = process.env.HOST || 'localhost'
 
-// Initialize database
-initializeDatabase().catch(console.error)
+// Initialize database and schedulers
+initializeDatabase()
+  .then(() => {
+    console.log('✅ База данных инициализирована')
+
+    // Инициализация планировщиков после успешного подключения к БД
+    initializeSchedulers()
+
+    // Initialize API keys from environment
+
+    ApiKeyManager.initializeFromEnv().then(() => {
+      ApiKeyManager.showStats()
+    })
+  })
+  .catch(console.error)
 
 // Initialize queue
 if (process.env.ALLOW_EXTERNAL_API === 'true') {
@@ -88,8 +98,8 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на http://${HOST}:${PORT}`)
   console.log(`📍 Режим: ${process.env.NODE_ENV}`)
-  console.log(`🗺️  Карты: http://${HOST}:${PORT}/maps/{guid}`)
-  console.log(`🔧 API: http://${HOST}:${PORT}/api/maps`)
+  console.log(`🗺️  Карты: http://${HOST}:${PORT}/maps/competitors/{guid}`)
+  console.log(`🔧 API: http://${HOST}:${PORT}/api/maps/competitors`)
   console.log(`❤️  Health: http://${HOST}:${PORT}/health`)
 
   if (process.env.NODE_ENV === 'development') {
