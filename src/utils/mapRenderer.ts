@@ -20,7 +20,7 @@ export class MapRenderer {
     const uniquePrices = Array.from(
       new Set(data.competitors?.map((c) => c.price).filter(Boolean) || [])
     )
-  
+
     // Подсчет статистики
     const allCompetitors = data.competitors || []
     const totalCompetitors = allCompetitors.length
@@ -28,7 +28,7 @@ export class MapRenderer {
       (c) =>
         !c.longitude || !c.latitude || c.longitude === 0 || c.latitude === 0
     ).length
-  
+
     return `
   <!DOCTYPE html>
   <html>
@@ -83,7 +83,7 @@ export class MapRenderer {
           background: white;
           padding: 15px;
           border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
           max-width: 300px;
           min-width: 250px;
           font-family: Arial, sans-serif;
@@ -211,22 +211,131 @@ export class MapRenderer {
           border: 1px solid rgba(255, 255, 255, 0.2);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
           max-width: 300px;
-          max-height: 90vh;
+          width: 300px; /* Фиксированная ширина */
           display: flex;
           flex-direction: column;
+          box-sizing: border-box;
         }
         
-        .filters-panel h3 {
-          margin: 0 0 12px 0;
+        .filters-panel.compact {
+          height: 140px;
+          overflow: hidden;
+        }
+        
+        .filters-panel.expanded {
+          max-height: 90vh;
+          overflow: hidden;
+        }
+        
+        .filters-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 0;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+          cursor: pointer;
+          flex-shrink: 0;
+          user-select: none;
+        }
+        
+        .filters-header:hover {
+          background: rgba(255, 255, 255, 0.05);
+          margin: -8px -8px 0 -8px;
+          padding: 8px 8px 8px 8px;
+          border-radius: 4px;
+        }
+        
+        .filters-header h3 {
+          margin: 0;
           color: white;
           font-size: 16px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-          padding-bottom: 8px;
+          flex: 1;
+        }
+        
+        .toggle-arrow {
+          width: 16px;
+          height: 16px;
+          transition: transform 0.3s ease;
+          color: #ccc;
+        }
+        
+        .toggle-arrow.down {
+          transform: rotate(0deg);
+        }
+        
+        .toggle-arrow.up {
+          transform: rotate(180deg);
+        }
+        
+        .filter-content {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding-right: 5px;
+          opacity: 1;
+          transition: opacity 0.2s ease;
+        }
+        
+        .filters-panel.compact .filter-content {
+          opacity: 0;
+          pointer-events: none;
+        }
+        
+        .filters-actions {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid rgba(255, 255, 255, 0.3);
           flex-shrink: 0;
         }
         
+        
+        
+        .reset-filters {
+          background: #6c757d;
+          color: white;
+          border: none;
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          width: 100%;
+          transition: background 0.2s;
+          flex-shrink: 0;
+        }
+        
+        .reset-filters:hover {
+          background: #5a6268;
+        }
+        
+        .filters-stats {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid rgba(255, 255, 255, 0.3);
+          font-size: 12px;
+          color: #ccc;
+          line-height: 1.4;
+          flex-shrink: 0;
+        }
+        
+        .filters-panel.compact .filters-stats {
+          margin-top: 8px;
+          padding-top: 8px;
+        }
+        
+        .stats-total {
+          font-weight: bold;
+        }
+        
+        .stats-unmarked {
+          color: #ff6b6b;
+          font-weight: bold;
+        }
+        
         .filter-section {
-          margin-bottom: 15px;
+          margin-top: 8px;
           flex-shrink: 0;
         }
         
@@ -270,7 +379,7 @@ export class MapRenderer {
         
         .filter-checkbox.checked {
           background: rgba(255, 255, 255, 0.1);
-          margin: 4px -4px;
+          margin: 6px -4px;
           padding: 4px;
           border-radius: 3px;
         }
@@ -306,68 +415,22 @@ export class MapRenderer {
           margin: 0;
         }
         
-        .reset-filters {
-          background: #6c757d;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          margin-top: 10px;
-          width: 100%;
-          transition: background 0.2s;
-          flex-shrink: 0;
-        }
-        
-        .reset-filters:hover {
-          background: #5a6268;
-        }
-        
-        .filters-stats {
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid rgba(255, 255, 255, 0.3);
-          font-size: 12px;
-          color: #ccc;
-          line-height: 1.4;
-          flex-shrink: 0;
-        }
-        
-        .stats-total {
-          font-weight: bold;
-          margin-bottom: 4px;
-        }
-        
-        .stats-unmarked {
-          color: #ff6b6b;
-          font-weight: bold;
-        }
-        
-        .scrollable-content {
-          flex: 1;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-          padding-right: 5px;
-        }
-        
-        .scrollable-content::-webkit-scrollbar {
+        /* Стили для скроллбара */
+        .filter-content::-webkit-scrollbar {
           width: 6px;
         }
         
-        .scrollable-content::-webkit-scrollbar-track {
+        .filter-content::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.1);
           border-radius: 3px;
         }
         
-        .scrollable-content::-webkit-scrollbar-thumb {
+        .filter-content::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.3);
           border-radius: 3px;
         }
         
-        .scrollable-content::-webkit-scrollbar-thumb:hover {
+        .filter-content::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.5);
         }
         
@@ -440,15 +503,20 @@ export class MapRenderer {
           );
   
           const filtersPanel = document.createElement('div');
-          filtersPanel.className = 'filters-panel';
+          filtersPanel.className = 'filters-panel compact'; // По умолчанию компактный режим
           
           const unmarkedStats = unmarkedCompetitors > 0 ? 
             \`<div class="stats-unmarked">Не отмечены на карте: \${unmarkedCompetitors}</div>\` : '';
           
           filtersPanel.innerHTML = \`
-            <h3>Фильтры конкурентов</h3>
+            <div class="filters-header" id="filtersHeader">
+              <h3>Фильтры конкурентов</h3>
+              <svg class="toggle-arrow down" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M7.41 8.84L12 13.42l4.59-4.58L18 10.25l-6 6-6-6z"/>
+              </svg>
+            </div>
             
-            <div class="scrollable-content">
+            <div class="filter-content" id="filterContent">
               <div class="filter-section">
                 <h4>Вид цены</h4>
                 <div class="prices-container" id="pricesContainer">
@@ -461,7 +529,7 @@ export class MapRenderer {
                   \${uniquePrices.length === 0 ? '<p style="color: #999; font-size: 12px; margin: 0;">Нет данных о ценах</p>' : ''}
                 </div>
               </div>
-              
+  
               <div class="filter-section">
                 <h4>Оборот за 3 месяца</h4>
                 <div class="revenue-filter">
@@ -489,7 +557,10 @@ export class MapRenderer {
               </div>
             </div>
             
-            <button class="reset-filters" id="resetFilters">Сбросить фильтры</button>
+            <div class="filters-actions" id="filtersActions">
+              <button class="reset-filters" id="resetFilters">Сбросить фильтры</button>
+            </div>
+            
             <div class="filters-stats">
               <div class="stats-total">Показано: <span id="visibleCount">\${totalCompetitors}</span> из \${totalCompetitors}</div>
               \${unmarkedStats}
@@ -497,6 +568,53 @@ export class MapRenderer {
           \`;
           
           document.body.appendChild(filtersPanel);
+  
+          // Функция для переключения компактного режима
+          function toggleFilters() {
+            const isCompact = filtersPanel.classList.contains('compact');
+            const arrow = document.querySelector('.toggle-arrow');
+            
+            if (isCompact) {
+              filtersPanel.classList.remove('compact');
+              filtersPanel.classList.add('expanded');
+              arrow.classList.remove('down');
+              arrow.classList.add('up');
+            } else {
+              filtersPanel.classList.add('compact');
+              filtersPanel.classList.remove('expanded');
+              arrow.classList.remove('up');
+              arrow.classList.add('down');
+              
+              // Скрываем балун контрагента при сворачивании фильтров
+              hideCounterpartyBalloon();
+            }
+          }
+  
+          // Функция для скрытия балуна контрагента
+          function hideCounterpartyBalloon() {
+            balloonContainers.forEach((data, markerElement) => {
+              if (markerElement.classList.contains('green')) {
+                data.container.style.display = 'none';
+              }
+            });
+            
+            if (currentActiveContainer) {
+              currentActiveContainer.classList.remove('active');
+              currentActiveContainer.querySelector('.balloon').classList.remove('active');
+              currentActiveContainer = null;
+            }
+          }
+  
+          // Обработчик клика по заголовку фильтров
+          document.getElementById('filtersHeader').addEventListener('click', toggleFilters);
+  
+          // Обработчик клика по всей панели фильтров для скрытия балуна контрагента
+          filtersPanel.addEventListener('click', (e) => {
+            // Если клик не по заголовку (уже обрабатывается отдельно) и не по элементам внутри контента
+            if (!e.target.closest('.filters-header')) {
+              hideCounterpartyBalloon();
+            }
+          });
   
           const balloonsOverlay = document.getElementById('balloonsOverlay');
           let currentActiveContainer = null;
