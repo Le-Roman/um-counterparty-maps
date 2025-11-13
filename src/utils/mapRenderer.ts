@@ -16,6 +16,19 @@ export class MapRenderer {
     guid: string,
     data: CounterpartyInstance
   ): string {
+    // Собираем уникальные значения цен из конкурентов
+    const uniquePrices = Array.from(
+      new Set(data.competitors?.map((c) => c.price).filter(Boolean) || [])
+    )
+  
+    // Подсчет статистики
+    const allCompetitors = data.competitors || []
+    const totalCompetitors = allCompetitors.length
+    const unmarkedCompetitors = allCompetitors.filter(
+      (c) =>
+        !c.longitude || !c.latitude || c.longitude === 0 || c.latitude === 0
+    ).length
+  
     return `
   <!DOCTYPE html>
   <html>
@@ -31,13 +44,13 @@ export class MapRenderer {
           margin: 0;
           padding: 0;
           font-family: Arial, sans-serif;
-          overflow: hidden; /* Полностью убираем скролл */
+          overflow: hidden;
         }
         
         #map {
-          width: 100vw; /* Занимает всю ширину viewport */
-          height: 100vh; /* Занимает всю высоту viewport */
-          position: fixed; /* Фиксированное позиционирование */
+          width: 100vw;
+          height: 100vh;
+          position: fixed;
           top: 0;
           left: 0;
           overflow: hidden;
@@ -45,7 +58,7 @@ export class MapRenderer {
         
         /* Контейнер для балунов поверх карты */
         .balloons-overlay {
-          position: fixed; /* Меняем на fixed */
+          position: fixed;
           top: 0;
           left: 0;
           width: 100vw;
@@ -178,35 +191,202 @@ export class MapRenderer {
           fill: orangered;
         }
         
-        /* Информационный блок */
-        .info-panel {
-          position: fixed; /* Меняем на fixed */
+        .hidden-marker {
+          display: none !important;
+        }
+        
+        /* Панель фильтров */
+        .filters-panel {
+          position: fixed;
           top: 15px;
           left: 15px;
-          background: rgba(60, 60, 60, 0.8);
+          background: rgba(60, 60, 60, 0.95);
           color: white;
-          padding: 12px 16px;
+          padding: 15px;
           border-radius: 8px;
           font-family: Arial, sans-serif;
           font-size: 14px;
-          line-height: 1.4;
           z-index: 100000;
           backdrop-filter: blur(2px);
           border: 1px solid rgba(255, 255, 255, 0.2);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          max-width: 300px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
         }
         
-        .info-panel p {
+        .filters-panel h3 {
+          margin: 0 0 12px 0;
+          color: white;
+          font-size: 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+          padding-bottom: 8px;
+          flex-shrink: 0;
+        }
+        
+        .filter-section {
+          margin-bottom: 15px;
+          flex-shrink: 0;
+        }
+        
+        .filter-section h4 {
+          margin: 0 0 8px 0;
+          color: #ccc;
+          font-size: 14px;
+          font-weight: bold;
+        }
+        
+        .prices-container {
+          max-height: 35vh;
+          overflow-y: auto;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          padding: 4px 8px;
+          background: rgba(255, 255, 255, 0.1);
+          flex-shrink: 0;
+        }
+        
+        .filter-checkbox {
+          display: flex;
+          align-items: center;
+          margin: 6px 0;
+          cursor: pointer;
+          padding: 4px 0;
+        }
+        
+        .filter-checkbox input {
+          margin-right: 8px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        
+        .filter-checkbox label {
+          cursor: pointer;
+          user-select: none;
+          flex-grow: 1;
           margin: 0;
         }
         
-        .info-panel .total {
-          font-weight: bold;
+        .filter-checkbox.checked {
+          background: rgba(255, 255, 255, 0.1);
+          margin: 4px -4px;
+          padding: 4px;
+          border-radius: 3px;
         }
-          
-        .info-panel .unmarked {
+        
+        .revenue-filter {
+          display: flex;
+          flex-direction: column;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          padding: 4px 8px;
+          background: rgba(255, 255, 255, 0.1);
+          gap: 6px;
+          flex-shrink: 0;
+        }
+        
+        .revenue-option {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          padding: 4px 0;
+        }
+        
+        .revenue-option input {
+          margin-right: 8px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        
+        .revenue-option label {
+          cursor: pointer;
+          user-select: none;
+          flex-grow: 1;
+          margin: 0;
+        }
+        
+        .reset-filters {
+          background: #6c757d;
+          color: white;
+          border: none;
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          margin-top: 10px;
+          width: 100%;
+          transition: background 0.2s;
+          flex-shrink: 0;
+        }
+        
+        .reset-filters:hover {
+          background: #5a6268;
+        }
+        
+        .filters-stats {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.3);
+          font-size: 12px;
+          color: #ccc;
+          line-height: 1.4;
+          flex-shrink: 0;
+        }
+        
+        .stats-total {
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        
+        .stats-unmarked {
           color: #ff6b6b;
           font-weight: bold;
+        }
+        
+        .scrollable-content {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          padding-right: 5px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 3px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+        
+        .prices-container::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .prices-container::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+        
+        .prices-container::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 3px;
+        }
+        
+        .prices-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
         }
       </style>
     </head>
@@ -216,12 +396,20 @@ export class MapRenderer {
   
       <script>
         const counterpartyData = ${JSON.stringify(data)};
-
-        // Подсчет статистики конкурентов
-        const totalCompetitors = counterpartyData.competitors ? counterpartyData.competitors.length : 0;
-        const unmarkedCompetitors = counterpartyData.competitors ? 
-          counterpartyData.competitors.filter(c => c.longitude === 0 && c.latitude === 0).length : 0;
         
+        const allCompetitors = ${JSON.stringify(allCompetitors)};
+        const uniquePrices = ${JSON.stringify(uniquePrices)};
+        const totalCompetitors = ${totalCompetitors};
+        const unmarkedCompetitors = ${unmarkedCompetitors};
+  
+        let activeFilters = {
+          prices: [],
+          revenueRange: 'all'
+        };
+  
+        let competitorMarkers = [];
+        let competitorBalloons = new Map();
+  
         ymaps3.ready.then(() => {
           const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
           
@@ -231,7 +419,7 @@ export class MapRenderer {
           if (counterpartyData.latitude && counterpartyData.longitude) {
             center = [counterpartyData.longitude, counterpartyData.latitude];
           } else {
-            const firstCompetitor = counterpartyData.competitors?.find(c => c.latitude && c.longitude);
+            const firstCompetitor = allCompetitors.find(c => c.latitude && c.longitude);
             if (firstCompetitor) {
               center = [firstCompetitor.longitude, firstCompetitor.latitude];
             } 
@@ -250,30 +438,204 @@ export class MapRenderer {
               new YMapDefaultFeaturesLayer({})
             ]
           );
-
-          // Создаем информационную панель
-          const infoPanel = document.createElement('div');
-          infoPanel.className = 'info-panel';
+  
+          const filtersPanel = document.createElement('div');
+          filtersPanel.className = 'filters-panel';
           
-          if (unmarkedCompetitors > 0) {
-            infoPanel.innerHTML = \`
-              <p class="total">Всего конкурентов: \${totalCompetitors}</p>
-              <p class="unmarked">Не отмечены: \${unmarkedCompetitors}</p>
-            \`;
-          } else {
-            infoPanel.innerHTML = \`
-              <p class="total">Всего конкурентов: \${totalCompetitors}</p>
-            \`;
-          }
+          const unmarkedStats = unmarkedCompetitors > 0 ? 
+            \`<div class="stats-unmarked">Не отмечены на карте: \${unmarkedCompetitors}</div>\` : '';
           
-          document.body.appendChild(infoPanel); // Добавляем в body, а не в map
+          filtersPanel.innerHTML = \`
+            <h3>Фильтры конкурентов</h3>
+            
+            <div class="scrollable-content">
+              <div class="filter-section">
+                <h4>Вид цены</h4>
+                <div class="prices-container" id="pricesContainer">
+                  \${uniquePrices.map(price => \`
+                    <div class="filter-checkbox" id="checkbox-\${price}">
+                      <input type="checkbox" id="price-\${price}" value="\${price}">
+                      <label for="price-\${price}">\${price}</label>
+                    </div>
+                  \`).join('')}
+                  \${uniquePrices.length === 0 ? '<p style="color: #999; font-size: 12px; margin: 0;">Нет данных о ценах</p>' : ''}
+                </div>
+              </div>
+              
+              <div class="filter-section">
+                <h4>Оборот за 3 месяца</h4>
+                <div class="revenue-filter">
+                  <div class="revenue-option">
+                    <input type="radio" id="revenue-all" name="revenue" value="all" checked>
+                    <label for="revenue-all">Любой</label>
+                  </div>
+                  <div class="revenue-option">
+                    <input type="radio" id="revenue-less-100k" name="revenue" value="less-100k">
+                    <label for="revenue-less-100k">Менее 100 000 ₽</label>
+                  </div>
+                  <div class="revenue-option">
+                    <input type="radio" id="revenue-100k-plus" name="revenue" value="100k-plus">
+                    <label for="revenue-100k-plus">От 100 000 ₽</label>
+                  </div>
+                  <div class="revenue-option">
+                    <input type="radio" id="revenue-500k-plus" name="revenue" value="500k-plus">
+                    <label for="revenue-500k-plus">От 500 000 ₽</label>
+                  </div>
+                  <div class="revenue-option">
+                    <input type="radio" id="revenue-1m-plus" name="revenue" value="1m-plus">
+                    <label for="revenue-1m-plus">От 1 000 000 ₽</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <button class="reset-filters" id="resetFilters">Сбросить фильтры</button>
+            <div class="filters-stats">
+              <div class="stats-total">Показано: <span id="visibleCount">\${totalCompetitors}</span> из \${totalCompetitors}</div>
+              \${unmarkedStats}
+            </div>
+          \`;
+          
+          document.body.appendChild(filtersPanel);
   
           const balloonsOverlay = document.getElementById('balloonsOverlay');
           let currentActiveContainer = null;
           const balloonContainers = new Map();
           let updateInterval = null;
-
-          // Функция для получения абсолютных координат маркера
+  
+          function competitorMatchesFilters(competitor) {
+            const priceMatch = activeFilters.prices.length === 0 || 
+                              activeFilters.prices.includes(competitor.price);
+            
+            const revenue = competitor.revenue_last_3_months || 0;
+            let revenueMatch = true;
+            
+            switch (activeFilters.revenueRange) {
+              case 'less-100k':
+                revenueMatch = revenue < 100000;
+                break;
+              case '100k-plus':
+                revenueMatch = revenue >= 100000;
+                break;
+              case '500k-plus':
+                revenueMatch = revenue >= 500000;
+                break;
+              case '1m-plus':
+                revenueMatch = revenue >= 1000000;
+                break;
+              case 'all':
+              default:
+                revenueMatch = true;
+            }
+            
+            return priceMatch && revenueMatch;
+          }
+  
+          function updateCheckedStyles() {
+            const pricesContainer = document.getElementById('pricesContainer');
+            if (!pricesContainer) return;
+  
+            const checkboxes = Array.from(pricesContainer.querySelectorAll('.filter-checkbox'));
+            
+            checkboxes.sort((a, b) => {
+              const aChecked = a.querySelector('input[type="checkbox"]').checked;
+              const bChecked = b.querySelector('input[type="checkbox"]').checked;
+              
+              if (aChecked && !bChecked) return -1;
+              if (!aChecked && bChecked) return 1;
+              return 0;
+            });
+            
+            checkboxes.forEach(item => {
+              const checkbox = item.querySelector('input[type="checkbox"]');
+              if (checkbox.checked) {
+                item.classList.add('checked');
+              } else {
+                item.classList.remove('checked');
+              }
+              pricesContainer.appendChild(item);
+            });
+          }
+  
+          function applyFilters() {
+            let visibleCount = 0;
+            
+            competitorMarkers.forEach((marker, index) => {
+              const competitor = allCompetitors[index];
+              const shouldBeVisible = competitorMatchesFilters(competitor);
+              
+              // Скрываем/показываем маркер
+              if (marker.element) {
+                if (shouldBeVisible) {
+                  marker.element.classList.remove('hidden-marker');
+                  visibleCount++;
+                } else {
+                  marker.element.classList.add('hidden-marker');
+                }
+              }
+              
+              // Скрываем/показываем балун
+              const balloonData = competitorBalloons.get(marker.element);
+              if (balloonData) {
+                if (shouldBeVisible) {
+                  balloonData.container.style.display = 'block';
+                } else {
+                  balloonData.container.style.display = 'none';
+                  if (currentActiveContainer === balloonData.container) {
+                    currentActiveContainer.classList.remove('active');
+                    balloonData.balloon.classList.remove('active');
+                    currentActiveContainer = null;
+                  }
+                }
+              }
+            });
+            
+            document.getElementById('visibleCount').textContent = visibleCount;
+            updateCheckedStyles();
+          }
+  
+          function initializeFilters() {
+            const pricesContainer = document.getElementById('pricesContainer');
+            if (pricesContainer) {
+              pricesContainer.addEventListener('change', (e) => {
+                if (e.target.type === 'checkbox') {
+                  const price = e.target.value;
+                  if (e.target.checked) {
+                    if (!activeFilters.prices.includes(price)) {
+                      activeFilters.prices.push(price);
+                    }
+                  } else {
+                    activeFilters.prices = activeFilters.prices.filter(p => p !== price);
+                  }
+                  applyFilters();
+                }
+              });
+            }
+            
+            document.querySelectorAll('input[name="revenue"]').forEach(radio => {
+              radio.addEventListener('change', (e) => {
+                activeFilters.revenueRange = e.target.value;
+                applyFilters();
+              });
+            });
+            
+            document.getElementById('resetFilters').addEventListener('click', () => {
+              uniquePrices.forEach(price => {
+                const checkbox = document.getElementById(\`price-\${price}\`);
+                if (checkbox) checkbox.checked = false;
+              });
+              
+              document.getElementById('revenue-all').checked = true;
+              
+              activeFilters = {
+                prices: [],
+                revenueRange: 'all'
+              };
+              
+              applyFilters();
+            });
+          }
+  
           const getMarkerScreenPosition = (markerElement) => {
             const markerRect = markerElement.getBoundingClientRect();
             
@@ -282,27 +644,22 @@ export class MapRenderer {
               y: markerRect.top
             };
           };
-
-          // Функция для обновления позиции балуна
+  
           const updateBalloonPosition = (markerElement, balloonContainer) => {
             if (!markerElement || !balloonContainer) return;
             
             const position = getMarkerScreenPosition(markerElement);
             balloonContainer.style.left = position.x + 'px';
-            balloonContainer.style.top = (position.y - 10) + 'px';
+            balloonContainer.style.top = (position.y + 15) + 'px';
           };
   
-          // Функция для обновления всех позиций балунов
           const updateAllBalloonPositions = () => {
             balloonContainers.forEach((data, markerElement) => {
               updateBalloonPosition(markerElement, data.container);
             });
           };
   
-          // Функция для активации балуна
           const activateBalloon = (container, balloon) => {
-            console.log('Активируем балун');
-            
             if (currentActiveContainer && currentActiveContainer !== container) {
               currentActiveContainer.classList.remove('active');
               currentActiveContainer.querySelector('.balloon').classList.remove('active');
@@ -313,7 +670,6 @@ export class MapRenderer {
             currentActiveContainer = container;
           };
   
-          // Функция для создания балуна
           const createBalloon = (coordinates, content, isCompetitor = false) => {
             const balloonContainer = document.createElement('div');
             balloonContainer.className = 'balloon-container';
@@ -349,8 +705,7 @@ export class MapRenderer {
             return { container: balloonContainer, balloon: balloon };
           };
   
-          // Функция для создания маркера
-          const createPinMarker = (coordinates, colorClass, title, balloonData = null) => {
+          const createPinMarker = (coordinates, colorClass, title, balloonData = null, competitorData = null) => {
             const markerElement = document.createElement('div');
             markerElement.className = \`pin-marker \${colorClass}\`;
             
@@ -373,6 +728,7 @@ export class MapRenderer {
               );
               
               balloonContainers.set(markerElement, { container, balloon, coordinates });
+              competitorBalloons.set(markerElement, { container, balloon, competitorData });
               
               markerElement.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -396,7 +752,6 @@ export class MapRenderer {
             return marker;
           };
   
-          // Добавляем контрагента
           if (counterpartyData.latitude && counterpartyData.longitude) {
             const counterpartyContent = \`
               <h3>🎯 Новый клиент</h3>
@@ -427,16 +782,15 @@ export class MapRenderer {
             }, 1000);
           }
   
-          // Добавляем конкурентов
-          if (counterpartyData.competitors && counterpartyData.competitors.length > 0) {
-            counterpartyData.competitors.forEach((competitor) => {
+          if (allCompetitors.length > 0) {
+            allCompetitors.forEach((competitor, index) => {
               if (competitor.latitude && competitor.longitude && 
                   competitor.latitude !== 0 && competitor.longitude !== 0) {
                 const competitorCompactContent = \`
                   <div class="balloon-compact">
                     <p><strong>\${competitor.name}</strong></p>
-                    <p><strong>Цена:</strong> \${competitor.price}</p>
-                    <p><strong>Оборот:</strong> \${competitor.formatted_revenue_last_3_months}</p>
+                    <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
+                    <p><strong>Оборот:</strong> \${competitor.formatted_revenue_last_3_months || '0 ₽'}</p>
                     <button class="balloon-more">▼ Подробнее</button>
                   </div>
                   <div class="balloon-full">
@@ -448,7 +802,7 @@ export class MapRenderer {
                     <p><strong>Адрес:</strong> \${competitor.address || '-'}</p>
                     <br/>
                     <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
-                    <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.formatted_revenue_last_3_months}р</p>
+                    <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.formatted_revenue_last_3_months || '0 ₽'}</p>
                     <p><strong>Последняя продажа:</strong> \${competitor.last_sale_date || '-'}</p>
                     <button class="balloon-more">▲ Свернуть</button>
                   </div>
@@ -461,21 +815,25 @@ export class MapRenderer {
                   {
                     content: competitorCompactContent,
                     isCompetitor: true
-                  }
+                  },
+                  competitor
                 );
                 map.addChild(competitorMarker);
+                competitorMarkers.push(competitorMarker);
               }
             });
           }
   
-          // Запускаем интервал для обновления позиций балунов
+          initializeFilters();
+          updateCheckedStyles();
+  
           setTimeout(() => {
             updateInterval = setInterval(updateAllBalloonPositions, 100);
           }, 100);
   
-          // Закрываем балун контрагента при клике на карту
           document.getElementById('map').addEventListener('click', (e) => {
-            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker') && !e.target.closest('.info-panel')) {
+            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker') && 
+                !e.target.closest('.filters-panel')) {
               balloonContainers.forEach((data, markerElement) => {
                 if (markerElement.classList.contains('green')) {
                   data.container.style.display = 'none';
@@ -491,7 +849,7 @@ export class MapRenderer {
           });
           
           window.addEventListener('resize', updateAllBalloonPositions);
-
+  
           window.addEventListener('beforeunload', () => {
             if (updateInterval) {
               clearInterval(updateInterval);
@@ -506,7 +864,7 @@ export class MapRenderer {
       </script>
     </body>
   </html>
-      `
+        `
   }
 
   private static generateOSMMapHTML(
