@@ -23,12 +23,12 @@ export const validateMapData = (
   //     })
   //   }
 
-  //   if (!data.address || typeof data.address !== 'string') {
-  //     return res.status(400).json({
-  //       success: false,
-  //       error: 'Поле address обязательно и должно быть строкой',
-  //     })
-  //   }
+  if (!data.address || typeof data.address !== 'string') {
+    return res.status(400).json({
+      success: false,
+      error: 'Поле address обязательно и должно быть строкой',
+    })
+  }
 
   // Проверка координат
   //   if (data.latitude !== null && data.latitude !== undefined) {
@@ -88,6 +88,13 @@ export const validateMapData = (
         return res.status(400).json({
           success: false,
           error: `Competitor[${i}]: поле name обязательно`,
+        })
+      }
+
+      if (!competitor.address || typeof data.address !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: `Competitor[${i}]: поле address обязательно`,
         })
       }
 
