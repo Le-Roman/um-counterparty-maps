@@ -91,13 +91,6 @@ export const validateMapData = (
         })
       }
 
-      if (!competitor.address || typeof data.address !== 'string') {
-        return res.status(400).json({
-          success: false,
-          error: `Competitor[${i}]: поле address обязательно`,
-        })
-      }
-
       //   if (
       //     typeof competitor.revenue_last_3_months !== 'number' ||
       //     competitor.revenue_last_3_months < 0
