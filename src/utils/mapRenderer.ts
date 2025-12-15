@@ -131,7 +131,7 @@ export class MapRenderer {
         .balloon h3 {
           display: flex;
           justify-content: space-between;
-          align-items: flex-end;
+          align-items: center;
           margin: 0 0 10px 0;
           color: #333;
           border-bottom: 1px solid #eee;
@@ -154,12 +154,49 @@ export class MapRenderer {
           color: #333;
         }
         
+        /* Стили для кнопки свернуть/развернуть в заголовке */
+        .toggle-collapse-btn {
+          background: transparent;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        
+        .toggle-collapse-btn:hover {
+          background: rgba(0, 0, 0, 0.05);
+          color: #333;
+        }
+        
+        .toggle-collapse-btn .icon {
+          width: 16px;
+          height: 16px;
+          transition: transform 0.3s ease;
+        }
+        
+        .toggle-collapse-btn.collapsed .icon {
+          transform: rotate(180deg);
+        }
+        
         /* Стили для группы конкурентов в балуне */
         .competitors-group {
           max-height: 400px;
           overflow-y: auto;
           padding-right: 5px;
           margin-top: 10px;
+          transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .balloon.collapsed .competitors-group {
+          max-height: 0;
+          overflow: hidden;
+          opacity: 0;
+          margin-top: 0;
         }
         
         .competitor-section {
@@ -235,12 +272,27 @@ export class MapRenderer {
           color: #007bff;
           cursor: pointer;
           font-size: 12px;
-          padding: 2px 6px;
-          border-radius: 3px;
+          padding: 4px 8px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: background 0.2s ease;
+          margin-top: 8px;
         }
         
         .toggle-more-btn:hover {
           background: rgba(0, 123, 255, 0.1);
+        }
+        
+        .toggle-more-btn .icon {
+          width: 12px;
+          height: 12px;
+          transition: transform 0.3s ease;
+        }
+        
+        .toggle-more-btn.expanded .icon {
+          transform: rotate(180deg);
         }
         
         .competitor-compact {
@@ -808,7 +860,7 @@ export class MapRenderer {
             return group.competitors.some(competitor => competitorMatchesFilters(competitor));
           }
   
-          // Генерация HTML для секции конкурента
+          // Генерация HTML для секции конкурента (ИСПРАВЛЕНА)
           function generateCompetitorSectionHTML(competitor, index) {
             return \`
               <div class="competitor-section compact" data-competitor-id="\${competitor.id || index}" data-matches-filters="true">
@@ -818,7 +870,6 @@ export class MapRenderer {
                   </div>
                   <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
                   <p><strong>Оборот:</strong> \${competitor.formatted_revenue_last_3_months || '0 ₽'}</p>
-                  <button class="toggle-more-btn">▼ Подробнее</button>
                 </div>
                 <div class="competitor-expanded">
                   <div class="competitor-section-header">
@@ -831,8 +882,13 @@ export class MapRenderer {
                   <p><strong>Цена:</strong> \${competitor.price || '-'}</p>
                   <p><strong>Оборот за посл. 3 мес.:</strong> \${competitor.formatted_revenue_last_3_months || '0 ₽'}</p>
                   <p><strong>Последняя продажа:</strong> \${competitor.last_sale_date || '-'}</p>
-                  <button class="toggle-more-btn">▲ Свернуть</button>
                 </div>
+                <button class="toggle-more-btn">
+                  <span>Подробнее</span>
+                  <svg class="icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                  </svg>
+                </button>
               </div>
             \`;
           }
@@ -1035,7 +1091,7 @@ export class MapRenderer {
             currentActiveContainer = container;
           };
   
-          // Создание балуна для группы конкурентов
+          // Создание балуна для группы конкурентов (ИСПРАВЛЕНО)
           const createGroupBalloon = (coordinates, group, groupId) => {
             const balloonContainer = document.createElement('div');
             balloonContainer.className = 'balloon-container';
@@ -1044,7 +1100,17 @@ export class MapRenderer {
             ).join('');
             
             const balloonContent = \`
-              <h3>⚡ Конкуренты <span class="competitor-count-badge">\${group.competitors.length}</span></h3>
+              <h3>
+                ⚡ Конкуренты 
+                <span  style="display: flex; align-items: center; gap: 8px;">
+                  <span class="competitor-count-badge">\${group.competitors.length}</span>
+                  <button class="toggle-collapse-btn" title="Свернуть/развернуть">
+                  <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+                  </svg>
+                  </button>
+                </span>
+              </h3>
               <div class="competitors-group">
                 \${sectionsHTML}
               </div>
@@ -1058,27 +1124,56 @@ export class MapRenderer {
             balloonsOverlay.appendChild(balloonContainer);
             balloonContainer.style.display = 'block';
             
-            // Обработчики для переключения секций
+            // Обработчик для кнопки свернуть/развернуть весь балун
+            const toggleBtn = balloon.querySelector('.toggle-collapse-btn');
+            toggleBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              balloon.classList.toggle('collapsed');
+              toggleBtn.classList.toggle('collapsed');
+              activateBalloon(balloonContainer, balloon);
+            });
+            
+            // Обработчики для переключения секций (ИСПРАВЛЕНО)
             balloon.addEventListener('click', (e) => {
               e.stopPropagation();
               
-              if (e.target.classList.contains('toggle-more-btn')) {
-                const section = e.target.closest('.competitor-section');
+              // Клик в любом месте балуна (кроме кнопок) делает его активным
+              if (!e.target.classList.contains('toggle-more-btn') && 
+                  !e.target.closest('.toggle-more-btn') &&
+                  !e.target.classList.contains('toggle-collapse-btn') &&
+                  !e.target.closest('.toggle-collapse-btn')) {
+                activateBalloon(balloonContainer, balloon);
+              }
+              
+              // Обработка кнопки "Подробнее/Свернуть"
+              if (e.target.classList.contains('toggle-more-btn') || e.target.closest('.toggle-more-btn')) {
+                const btn = e.target.classList.contains('toggle-more-btn') 
+                  ? e.target 
+                  : e.target.closest('.toggle-more-btn');
+                const section = btn.closest('.competitor-section');
+                
                 if (section) {
+                  const isExpanded = section.classList.contains('expanded');
+                  
+                  // Переключаем состояние секции
                   section.classList.toggle('compact');
                   section.classList.toggle('expanded');
                   
+                  // Обновляем класс expanded для кнопки
+                  btn.classList.toggle('expanded');
+                  
                   // Обновляем текст кнопки
-                  const btn = section.querySelector('.toggle-more-btn');
+                  const textSpan = btn.querySelector('span');
                   if (section.classList.contains('expanded')) {
-                    btn.textContent = '▲ Свернуть';
+                    textSpan.textContent = 'Свернуть';
                   } else {
-                    btn.textContent = '▼ Подробнее';
+                    textSpan.textContent = 'Подробнее';
                   }
+                  
+                  // Активируем балун
+                  activateBalloon(balloonContainer, balloon);
                 }
               }
-              
-              activateBalloon(balloonContainer, balloon);
             });
             
             balloonContainer.addEventListener('click', (e) => {
@@ -1086,7 +1181,7 @@ export class MapRenderer {
               activateBalloon(balloonContainer, balloon);
             });
             
-            return { container: balloonContainer, balloon: balloon };
+            return { container: balloonContainer, balloon: balloon, toggleBtn: toggleBtn };
           };
   
           const createPinMarker = (coordinates, colorClass, title, group = null, groupId = null) => {
@@ -1105,9 +1200,9 @@ export class MapRenderer {
             \`;
             
             // Добавляем бейдж с количеством для групп
-            if (group && group.competitors.length > 1) {
-              markerHTML += \`<div class="marker-count-badge">\${group.competitors.length}</div>\`;
-            }
+            // if (group && group.competitors.length > 1) {
+            //   markerHTML += \`<div class="marker-count-badge">\${group.competitors.length}</div>\`;
+            // }
             
             markerElement.innerHTML = markerHTML;
             markerElement.title = title;
@@ -1129,6 +1224,7 @@ export class MapRenderer {
               competitorBalloons.set(markerElement, { 
                 container: balloonData.container, 
                 balloon: balloonData.balloon,
+                toggleBtn: balloonData.toggleBtn,
                 groupId 
               });
               
@@ -1275,7 +1371,9 @@ export class MapRenderer {
         competitor.longitude !== 0
       ) {
         // Создаем ключ на основе координат
-        const key = `${competitor.longitude.toFixed(6)}_\${competitor.latitude.toFixed(6)}`
+        const key = `${competitor.longitude.toFixed(
+          6
+        )}_\${competitor.latitude.toFixed(6)}`
 
         if (!groups[key]) {
           groups[key] = {
