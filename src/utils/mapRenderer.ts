@@ -777,8 +777,20 @@ export class MapRenderer {
           const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
           
           let center = [37.64, 55.76]
-          const zoom = 18
+
+          function getZoom() {
+            const minZoom = 12
+            const maxZoom = 18
           
+            const result = minZoom + Math.ceil(groupsWithCoords / 100)
+
+            if(result > maxZoom) return maxZoom
+
+            return result
+          }
+
+          let zoom = getZoom()
+
           // Ищем первую группу с координатами
           const firstGroupWithCoords = Object.values(groups).find(group => 
             group.coordinates
