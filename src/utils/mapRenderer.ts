@@ -16,17 +16,25 @@ export class MapRenderer {
   ): string {
     // Собираем уникальные значения цен из конкурентов
     const allCompetitors = data.competitors || []
-    const uniquePrices = Array.from(
-      new Set(allCompetitors.map((c) => c.price).filter(Boolean))
-    )
-    // Группируем конкурентов по координатам
-    const competitorGroups = this.groupCompetitorsByCoordinates(allCompetitors)
+
+    // Группируем с учетом контрагента
+    const groups = this.groupCompetitorsByCoordinates(allCompetitors, data)
 
     // Подсчет статистики
     const totalCompetitors = allCompetitors.length
     const unmarkedCompetitors = allCompetitors.filter(
       (c) =>
         !c.longitude || !c.latitude || c.longitude === 0 || c.latitude === 0
+    ).length
+
+    // Подсчет уникальных цен для фильтров
+    const uniquePrices = Array.from(
+      new Set(allCompetitors.map((c) => c.price).filter(Boolean))
+    )
+
+    // Подсчет групп с координатами
+    const groupsWithCoords = Object.values(groups).filter(
+      (g) => g.coordinates
     ).length
 
     return `
@@ -84,13 +92,13 @@ export class MapRenderer {
           padding: 15px;
           border-radius: 8px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-          max-width: 350px;
-          min-width: 280px;
+          width: 300px;
           font-family: Arial, sans-serif;
           border: 2px solid #ccc;
           position: relative;
           margin-bottom: 10px;
           pointer-events: auto;
+          box-sizing: border-box;
         }
         
         .balloon.active {
@@ -185,7 +193,7 @@ export class MapRenderer {
         
         /* Стили для группы конкурентов в балуне */
         .competitors-group {
-          max-height: 400px;
+          max-height: 240px;
           overflow-y: auto;
           padding-right: 5px;
           margin-top: 10px;
@@ -323,6 +331,10 @@ export class MapRenderer {
           display: none !important;
         }
         
+        .competitors-section.hidden-section {
+          display: none !important;
+        }
+        
         .group-statistics {
           margin-top: 10px;
           padding: 8px;
@@ -343,35 +355,15 @@ export class MapRenderer {
           height: 34px;
           cursor: pointer;
           transform: translate(-17px, -34px);
+          position: relative;
         }
         
-        .pin-marker.green svg {
+        .pin-marker.green svg path {
           fill: seagreen;
         }
         
-        .pin-marker.red svg {
+        .pin-marker.red svg path {
           fill: orangered;
-        }
-        
-        .pin-marker.group svg {
-          fill: #dc3545;
-        }
-        
-        .marker-count-badge {
-          position: absolute;
-          top: -5px;
-          right: -5px;
-          background: #dc3545;
-          color: white;
-          font-size: 11px;
-          font-weight: bold;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid white;
         }
         
         .hidden-marker {
@@ -598,6 +590,98 @@ export class MapRenderer {
           margin: 0;
         }
         
+        /* Улучшенные стили для секции клиента с более заметной анимацией */
+        .client-section {
+          animation: intensePulse 1.5s infinite;
+          border: 3px solid #4CAF50;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 12px;
+          background: linear-gradient(135deg, #ffffff 0%, #e8f5e9 100%);
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+        }
+        
+        .client-section::before {
+          content: '🔥 НОВЫЙ КЛИЕНТ';
+          position: absolute;
+          top: 0;
+          right: 0;
+          background: linear-gradient(135deg, #4CAF50, #2E7D32);
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+          padding: 3px 8px;
+          border-radius: 0 0 0 6px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          z-index: 2;
+        }
+        
+        .client-section::after {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: -2px;
+          right: -2px;
+          bottom: -2px;
+          background: #f8ffef;
+          border-radius: 10px;
+          z-index: 1;
+          opacity: 0.7;
+          animation: borderGlow 2s infinite;
+        }
+        
+        @keyframes intensePulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            transform: scale(1);
+          }
+          50% {
+            box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+            transform: scale(1.02);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            transform: scale(1);
+          }
+        }
+        
+        @keyframes borderGlow {
+          0% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.7;
+          }
+          100% {
+            opacity: 0.3;
+          }
+        }
+        
+        .client-section h4 {
+          color: #2E7D32;
+          margin-top: 0;
+          margin-bottom: 10px;
+          padding-right: 85px;
+          font-size: 15px;
+          font-weight: bold;
+          position: relative;
+          z-index: 2;
+        }
+        
+        .client-section p {
+          position: relative;
+          z-index: 2;
+          margin: 6px 0;
+          font-size: 13px;
+        }
+        
+        .client-section strong {
+          color: #1B5E20;
+          font-weight: bold;
+        }
+        
         /* Стили для скроллбара */
         .filter-content::-webkit-scrollbar {
           width: 6px;
@@ -657,45 +741,50 @@ export class MapRenderer {
     <body>
       <div id="map"></div>
       <div class="balloons-overlay" id="balloonsOverlay"></div>
-  
+
       <script>
         const counterpartyData = ${JSON.stringify(data)};
         const allCompetitors = ${JSON.stringify(allCompetitors)};
-        const competitorGroups = ${JSON.stringify(competitorGroups)};
+        const groups = ${JSON.stringify(groups)};
         const uniquePrices = ${JSON.stringify(uniquePrices)};
         const totalCompetitors = ${totalCompetitors};
         const unmarkedCompetitors = ${unmarkedCompetitors};
+        const groupsWithCoords = ${groupsWithCoords};
 
         // Подсчитываем сколько конкурентов с координатами
         const competitorsWithCoords = allCompetitors.filter(c => 
           c.latitude && c.longitude && c.latitude !== 0 && c.longitude !== 0
         ).length;
-  
+        
+        // Считаем общее количество точек на карте
+        let totalPointsOnMap = 0;
+        Object.values(groups).forEach(group => {
+          if (group.coordinates) {
+            totalPointsOnMap++;
+          }
+        });
+
         let activeFilters = {
           prices: [],
           revenueRange: 'all'
         };
-  
+
         let competitorMarkers = [];
         let competitorBalloons = new Map();
-        let competitorGroupsData = new Map(); // хранит группы конкурентов для каждого маркера
-  
+        let competitorGroupsData = new Map();
+
         ymaps3.ready.then(() => {
           const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
           
           let center = [37.64, 55.76]
-          const zoom = 14
+          const zoom = 18
           
-          if (counterpartyData.latitude && counterpartyData.longitude) {
-            center = [counterpartyData.longitude, counterpartyData.latitude];
-          } else {
-            // Ищем первую группу с координатами
-            const firstGroupWithCoords = Object.values(competitorGroups).find(group => 
-              group.coordinates && group.competitors.length > 0
-            );
-            if (firstGroupWithCoords) {
-              center = firstGroupWithCoords.coordinates;
-            } 
+          // Ищем первую группу с координатами
+          const firstGroupWithCoords = Object.values(groups).find(group => 
+            group.coordinates
+          );
+          if (firstGroupWithCoords) {
+            center = firstGroupWithCoords.coordinates;
           }
           
           const map = new YMap(
@@ -711,12 +800,9 @@ export class MapRenderer {
               new YMapDefaultFeaturesLayer({})
             ]
           );
-  
+
           const filtersPanel = document.createElement('div');
           filtersPanel.className = \`filters-panel compact \${unmarkedCompetitors ? "unmarkedCompetitors" : ""}\`;
-          
-          // Статистика для отображения без фильтров
-          const groupsWithCoords = Object.values(competitorGroups).filter(g => g.coordinates).length;
           
           filtersPanel.innerHTML = \`
             <div class="filters-header" id="filtersHeader">
@@ -739,7 +825,7 @@ export class MapRenderer {
                   \${uniquePrices.length === 0 ? '<p style="color: #999; font-size: 12px; margin: 0;">Нет данных о ценах</p>' : ''}
                 </div>
               </div>
-  
+
               <div class="filter-section">
                 <h4>Оборот за 3 месяца</h4>
                 <div class="revenue-filter">
@@ -772,13 +858,13 @@ export class MapRenderer {
             </div>
             
             <div class="filters-stats">
-              <div class="stats-total">Показано: <span id="visibleCompetitorsCount">\${competitorsWithCoords}</span> из \${totalCompetitors}</div>
+              <div class="stats-total" style="margin-top: 4px;">Конкурентов: <span id="visibleCompetitorsCount">\${competitorsWithCoords}</span> из \${totalCompetitors}</div>
               \${unmarkedCompetitors > 0 ? \`<div class="stats-unmarked" id="unmarkedStats">Не отмечены на карте: \${unmarkedCompetitors}</div>\` : ''}
             </div>
           \`;
           
           document.body.appendChild(filtersPanel);
-  
+
           // Функция для переключения компактного режима
           function toggleFilters() {
             const isCompact = filtersPanel.classList.contains('compact');
@@ -794,38 +880,16 @@ export class MapRenderer {
               filtersPanel.classList.remove('expanded');
               arrow.classList.remove('up');
               arrow.classList.add('down');
-              
-              hideCounterpartyBalloon();
             }
           }
-  
-          function hideCounterpartyBalloon() {
-            balloonContainers.forEach((data, markerElement) => {
-              if (markerElement.classList.contains('green')) {
-                data.container.style.display = 'none';
-              }
-            });
-            
-            if (currentActiveContainer) {
-              currentActiveContainer.classList.remove('active');
-              currentActiveContainer.querySelector('.balloon').classList.remove('active');
-              currentActiveContainer = null;
-            }
-          }
-  
+
           document.getElementById('filtersHeader').addEventListener('click', toggleFilters);
-  
-          filtersPanel.addEventListener('click', (e) => {
-            if (!e.target.closest('.filters-header')) {
-              hideCounterpartyBalloon();
-            }
-          });
-  
+
           const balloonsOverlay = document.getElementById('balloonsOverlay');
           let currentActiveContainer = null;
           const balloonContainers = new Map();
           let updateInterval = null;
-  
+
           // Функция проверки конкурента по фильтрам
           function competitorMatchesFilters(competitor) {
             const priceMatch = activeFilters.prices.length === 0 || 
@@ -854,13 +918,8 @@ export class MapRenderer {
             
             return priceMatch && revenueMatch;
           }
-  
-          // Функция проверки группы на видимость
-          function groupHasVisibleCompetitors(group) {
-            return group.competitors.some(competitor => competitorMatchesFilters(competitor));
-          }
-  
-          // Генерация HTML для секции конкурента (ИСПРАВЛЕНА)
+
+          // Генерация HTML для секции конкурента
           function generateCompetitorSectionHTML(competitor, index) {
             return \`
               <div class="competitor-section compact" data-competitor-id="\${competitor.id || index}" data-matches-filters="true">
@@ -893,19 +952,137 @@ export class MapRenderer {
             \`;
           }
 
-          // Функция для подсчета общего количества видимых конкурентов
-          function countTotalVisibleCompetitors() {
-            let totalVisible = 0;
-            competitorGroupsData.forEach(group => {
-              totalVisible += group.competitors.filter(c => competitorMatchesFilters(c)).length;
-            });
-            return totalVisible;
+          // Функция для создания HTML секции нового клиента
+          function generateClientSectionHTML(clientData) {
+            return \`
+              <div class="client-section">
+                <h4>Новый клиент</h4>
+                <p><strong>Телефон:</strong> \${clientData.phone || '-'}</p>
+                <p><strong>Менеджер:</strong> \${clientData.manager || '-'}</p>
+                <p><strong>Адрес:</strong> \${clientData.address || '-'}</p>
+                <p><strong>Цена:</strong> \${clientData.price || '-'}</p>
+              </div>
+            \`;
           }
-       
+
+          // Функция для создания комбинированного балуна
+          function createCombinedBalloon(group, groupId) {
+            const balloonContainer = document.createElement('div');
+            balloonContainer.className = 'balloon-container';
+            
+            // Основной контент
+            let contentHTML = '';
+            
+            if (group.hasClient) {
+              contentHTML += generateClientSectionHTML(group.clientData);
+            }
+            
+            // Добавляем секцию конкурентов только если есть конкуренты
+            if (group.competitors.length > 0) {
+              // HTML для секций конкурентов
+              const competitorsSectionsHTML = group.competitors
+                .map((competitor, index) => generateCompetitorSectionHTML(competitor, index))
+                .join('');
+                
+              contentHTML += \`
+                <div class="competitors-section" id="competitors-section-\${groupId}">
+                  <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                    ⚡ Конкуренты
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                      <span class="competitor-count-badge" id="count-badge-\${groupId}">\${group.competitors.length}</span>
+                      <button class="toggle-collapse-btn" title="Свернуть/развернуть">
+                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                          <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+                        </svg>
+                      </button>
+                    </span>
+                  </h3>
+                  <div class="competitors-group" id="competitors-group-\${groupId}">
+                    \${competitorsSectionsHTML}
+                  </div>
+                </div>
+              \`;
+            }
+            
+            // Если контента нет вообще (хотя такого не должно быть)
+            if (contentHTML === '') {
+              contentHTML = '<p>Нет данных для отображения</p>';
+            }
+            
+            const balloonContent = contentHTML;
+            
+            const balloon = document.createElement('div');
+            balloon.className = 'balloon competitor-balloon';
+            if (group.hasClient) {
+              balloon.classList.add('has-client');
+            }
+            balloon.innerHTML = balloonContent;
+            
+            balloonContainer.appendChild(balloon);
+            balloonsOverlay.appendChild(balloonContainer);
+            balloonContainer.style.display = 'block';
+            
+            // Обработчики для кнопок (только если есть конкуренты)
+            const toggleBtn = balloon.querySelector('.toggle-collapse-btn');
+            if (toggleBtn) {
+              toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                balloon.classList.toggle('collapsed');
+                toggleBtn.classList.toggle('collapsed');
+                activateBalloon(balloonContainer, balloon);
+              });
+            }
+            
+            // Обработчики для секций конкурентов
+            balloon.addEventListener('click', (e) => {
+              e.stopPropagation();
+              
+              if (!e.target.classList.contains('toggle-more-btn') && 
+                  !e.target.closest('.toggle-more-btn') &&
+                  !e.target.classList.contains('toggle-collapse-btn') &&
+                  !e.target.closest('.toggle-collapse-btn')) {
+                activateBalloon(balloonContainer, balloon);
+              }
+              
+              // Обработка кнопки "Подробнее/Свернуть" в секциях конкурентов
+              if (e.target.classList.contains('toggle-more-btn') || e.target.closest('.toggle-more-btn')) {
+                const btn = e.target.classList.contains('toggle-more-btn') 
+                  ? e.target 
+                  : e.target.closest('.toggle-more-btn');
+                const section = btn.closest('.competitor-section');
+                
+                if (section) {
+                  const isExpanded = section.classList.contains('expanded');
+                  
+                  section.classList.toggle('compact');
+                  section.classList.toggle('expanded');
+                  
+                  btn.classList.toggle('expanded');
+                  
+                  const textSpan = btn.querySelector('span');
+                  if (section.classList.contains('expanded')) {
+                    textSpan.textContent = 'Свернуть';
+                  } else {
+                    textSpan.textContent = 'Подробнее';
+                  }
+                  
+                  activateBalloon(balloonContainer, balloon);
+                }
+              }
+            });
+            
+            balloonContainer.addEventListener('click', (e) => {
+              e.stopPropagation();
+              activateBalloon(balloonContainer, balloon);
+            });
+            
+            return { container: balloonContainer, balloon: balloon };
+          }
+
           function updateCheckedStyles() {
             const pricesContainer = document.getElementById('pricesContainer');
             if (!pricesContainer) return;
-  
+
             const checkboxes = Array.from(pricesContainer.querySelectorAll('.filter-checkbox'));
             
             checkboxes.sort((a, b) => {
@@ -927,11 +1104,11 @@ export class MapRenderer {
               pricesContainer.appendChild(item);
             });
           }
-  
+
           // Обновление видимости маркеров и секций в балунах
           function applyFilters() {
-            let visibleGroupsCount = 0;
-            let totalVisibleCompetitors = 0;
+            let visiblePointsCount = 0;
+            let visibleCompetitorsCount = 0;
             
             competitorMarkers.forEach((marker, index) => {
               const groupId = marker.element.dataset.groupId;
@@ -939,29 +1116,22 @@ export class MapRenderer {
               
               if (!group) return;
               
+              // Проверяем видимость группы
+              const hasClient = group.hasClient;
               const visibleCompetitorsInGroup = group.competitors.filter(c => competitorMatchesFilters(c));
-              const visibleCount = visibleCompetitorsInGroup.length;
-              const shouldBeVisible = visibleCount > 0;
+              const visibleCompetitorsCountInGroup = visibleCompetitorsInGroup.length;
+              
+              // Группа видима если есть клиент ИЛИ есть видимые конкуренты
+              const shouldBeVisible = hasClient || visibleCompetitorsCountInGroup > 0;
               
               // Скрываем/показываем маркер
               if (marker.element) {
                 if (shouldBeVisible) {
                   marker.element.classList.remove('hidden-marker');
-                  visibleGroupsCount++;
-                  totalVisibleCompetitors += visibleCount;
-                  
-                  // Обновляем бейдж с количеством видимых конкурентов
-                  const badge = marker.element.querySelector('.marker-count-badge');
-                  if (badge) {
-                    badge.textContent = visibleCount;
-                  }
+                  visiblePointsCount++;
+                  visibleCompetitorsCount += visibleCompetitorsCountInGroup;
                 } else {
                   marker.element.classList.add('hidden-marker');
-                  // Если маркер скрыт, сбрасываем бейдж к общему количеству
-                  const badge = marker.element.querySelector('.marker-count-badge');
-                  if (badge && group.competitors.length > 1) {
-                    badge.textContent = group.competitors.length;
-                  }
                 }
               }
               
@@ -969,7 +1139,7 @@ export class MapRenderer {
               const balloonData = competitorBalloons.get(marker.element);
               if (balloonData && balloonData.container) {
                 const competitorsContainer = balloonData.container.querySelector('.competitors-group');
-                if (competitorsContainer) {
+                if (competitorsContainer && group.competitors.length > 0) {
                   const sections = competitorsContainer.querySelectorAll('.competitor-section');
                   
                   sections.forEach((section, idx) => {
@@ -989,33 +1159,30 @@ export class MapRenderer {
                   // Обновляем бейдж в заголовке балуна с количеством видимых конкурентов
                   const titleBadge = balloonData.container.querySelector('.competitor-count-badge');
                   if (titleBadge) {
-                    titleBadge.textContent = visibleCount;
+                    titleBadge.textContent = visibleCompetitorsCountInGroup;
                   }
                   
-                  // Показываем/скрываем балун в зависимости от наличия видимых секций
-                  const hasVisibleSections = Array.from(sections).some(s => 
-                    s.dataset.matchesFilters === 'true'
-                  );
-                  
-                  if (shouldBeVisible && hasVisibleSections) {
-                    balloonData.container.style.display = 'block';
-                  } else {
-                    balloonData.container.style.display = 'none';
-                    if (currentActiveContainer === balloonData.container) {
-                      currentActiveContainer.classList.remove('active');
-                      balloonData.balloon.classList.remove('active');
-                      currentActiveContainer = null;
+                  // Проверяем, нужно ли скрыть всю секцию конкурентов
+                  const competitorsSection = balloonData.container.querySelector('.competitors-section');
+                  if (competitorsSection) {
+                    if (visibleCompetitorsCountInGroup > 0) {
+                      competitorsSection.classList.remove('hidden-section');
+                    } else {
+                      competitorsSection.classList.add('hidden-section');
                     }
                   }
                 }
+                
+                // Балуны всегда видны, скрываем только маркеры
+                balloonData.container.style.display = 'block';
               }
             });
             
             // Обновляем статистику в панели фильтров
-            document.getElementById('visibleCompetitorsCount').textContent = totalVisibleCompetitors;
+            document.getElementById('visibleCompetitorsCount').textContent = visibleCompetitorsCount;
             updateCheckedStyles();
           }
-  
+
           function initializeFilters() {
             const pricesContainer = document.getElementById('pricesContainer');
             if (pricesContainer) {
@@ -1057,7 +1224,7 @@ export class MapRenderer {
               applyFilters();
             });
           }
-  
+
           const getMarkerScreenPosition = (markerElement) => {
             const markerRect = markerElement.getBoundingClientRect();
             return {
@@ -1065,7 +1232,7 @@ export class MapRenderer {
               y: markerRect.top
             };
           };
-  
+
           const updateBalloonPosition = (markerElement, balloonContainer) => {
             if (!markerElement || !balloonContainer) return;
             
@@ -1073,13 +1240,13 @@ export class MapRenderer {
             balloonContainer.style.left = position.x + 'px';
             balloonContainer.style.top = (position.y + 15) + 'px';
           };
-  
+
           const updateAllBalloonPositions = () => {
             balloonContainers.forEach((data, markerElement) => {
               updateBalloonPosition(markerElement, data.container);
             });
           };
-  
+
           const activateBalloon = (container, balloon) => {
             if (currentActiveContainer && currentActiveContainer !== container) {
               currentActiveContainer.classList.remove('active');
@@ -1090,255 +1257,157 @@ export class MapRenderer {
             balloon.classList.add('active');
             currentActiveContainer = container;
           };
-  
-          // Создание балуна для группы конкурентов (ИСПРАВЛЕНО)
-          const createGroupBalloon = (coordinates, group, groupId) => {
-            const balloonContainer = document.createElement('div');
-            balloonContainer.className = 'balloon-container';
-            const sectionsHTML = group.competitors.map((competitor, index) => 
-              generateCompetitorSectionHTML(competitor, index)
-            ).join('');
-            
-            const balloonContent = \`
-              <h3>
-                ⚡ Конкуренты 
-                <span  style="display: flex; align-items: center; gap: 8px;">
-                  <span class="competitor-count-badge">\${group.competitors.length}</span>
-                  <button class="toggle-collapse-btn" title="Свернуть/развернуть">
-                  <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
-                  </svg>
-                  </button>
-                </span>
-              </h3>
-              <div class="competitors-group">
-                \${sectionsHTML}
-              </div>
-            \`;
-            
-            const balloon = document.createElement('div');
-            balloon.className = 'balloon competitor-balloon';
-            balloon.innerHTML = balloonContent;
-            
-            balloonContainer.appendChild(balloon);
-            balloonsOverlay.appendChild(balloonContainer);
-            balloonContainer.style.display = 'block';
-            
-            // Обработчик для кнопки свернуть/развернуть весь балун
-            const toggleBtn = balloon.querySelector('.toggle-collapse-btn');
-            toggleBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              balloon.classList.toggle('collapsed');
-              toggleBtn.classList.toggle('collapsed');
-              activateBalloon(balloonContainer, balloon);
-            });
-            
-            // Обработчики для переключения секций (ИСПРАВЛЕНО)
-            balloon.addEventListener('click', (e) => {
-              e.stopPropagation();
-              
-              // Клик в любом месте балуна (кроме кнопок) делает его активным
-              if (!e.target.classList.contains('toggle-more-btn') && 
-                  !e.target.closest('.toggle-more-btn') &&
-                  !e.target.classList.contains('toggle-collapse-btn') &&
-                  !e.target.closest('.toggle-collapse-btn')) {
-                activateBalloon(balloonContainer, balloon);
-              }
-              
-              // Обработка кнопки "Подробнее/Свернуть"
-              if (e.target.classList.contains('toggle-more-btn') || e.target.closest('.toggle-more-btn')) {
-                const btn = e.target.classList.contains('toggle-more-btn') 
-                  ? e.target 
-                  : e.target.closest('.toggle-more-btn');
-                const section = btn.closest('.competitor-section');
-                
-                if (section) {
-                  const isExpanded = section.classList.contains('expanded');
-                  
-                  // Переключаем состояние секции
-                  section.classList.toggle('compact');
-                  section.classList.toggle('expanded');
-                  
-                  // Обновляем класс expanded для кнопки
-                  btn.classList.toggle('expanded');
-                  
-                  // Обновляем текст кнопки
-                  const textSpan = btn.querySelector('span');
-                  if (section.classList.contains('expanded')) {
-                    textSpan.textContent = 'Свернуть';
-                  } else {
-                    textSpan.textContent = 'Подробнее';
-                  }
-                  
-                  // Активируем балун
-                  activateBalloon(balloonContainer, balloon);
-                }
-              }
-            });
-            
-            balloonContainer.addEventListener('click', (e) => {
-              e.stopPropagation();
-              activateBalloon(balloonContainer, balloon);
-            });
-            
-            return { container: balloonContainer, balloon: balloon, toggleBtn: toggleBtn };
-          };
-  
-          const createPinMarker = (coordinates, colorClass, title, group = null, groupId = null) => {
+
+          // Функция для создания маркера с правильной формой 50/50
+          function createMarker(coordinates, group, groupId) {
             const markerElement = document.createElement('div');
-            markerElement.className = \`pin-marker \${colorClass}\`;
+            
+            // Создаем SVG для маркера
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("width", "34");
+            svg.setAttribute("height", "34");
+            svg.setAttribute("viewBox", "0 0 34 34");
+            
+            // Определяем тип маркера и цвет
+            let markerClass = 'pin-marker';
+            let pathFill = 'orangered'; // по умолчанию красный
+            
+            if (group.hasClient && group.competitors.length > 0) {
+              // Комбинированный маркер - создаем два отдельных path
+              markerClass = 'pin-marker combined';
+              
+              // Левая половина - зеленая
+              const leftPath = document.createElementNS(svgNS, "path");
+              leftPath.setAttribute("d", "M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34V0Z");
+              leftPath.setAttribute("fill", "seagreen");
+              
+              // Правая половина - красная
+              const rightPath = document.createElementNS(svgNS, "path");
+              rightPath.setAttribute("d", "M17 0V34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z");
+              rightPath.setAttribute("fill", "orangered");
+              
+              svg.appendChild(leftPath);
+              svg.appendChild(rightPath);
+              
+            } else if (group.hasClient) {
+              // Только клиент - зеленый
+              markerClass = 'pin-marker green';
+              pathFill = 'seagreen';
+              
+              const path = document.createElementNS(svgNS, "path");
+              path.setAttribute("d", "M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z");
+              path.setAttribute("fill", pathFill);
+              svg.appendChild(path);
+              
+            } else {
+              // Только конкуренты - красный
+              markerClass = 'pin-marker red';
+              pathFill = 'orangered';
+              
+              const path = document.createElementNS(svgNS, "path");
+              path.setAttribute("d", "M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z");
+              path.setAttribute("fill", pathFill);
+              svg.appendChild(path);
+            }
+            
+            // Добавляем белый круг в центре для всех типов маркеров
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", "17");
+            circle.setAttribute("cy", "12");
+            circle.setAttribute("r", "5");
+            circle.setAttribute("fill", "white");
+            svg.appendChild(circle);
+            
+            markerElement.className = markerClass;
             
             if (groupId) {
               markerElement.dataset.groupId = groupId;
             }
             
-            let markerHTML = \`
-              <svg width="34" height="34" viewBox="0 0 34 34">
-                <path d="M17 0C10.1 0 4.5 5.6 4.5 12.5C4.5 22.8 17 34 17 34S29.5 22.8 29.5 12.5C29.5 5.6 23.9 0 17 0Z"/>
-                <circle cx="17" cy="12" r="5" fill="white"/>
-              </svg>
-            \`;
+            markerElement.appendChild(svg);
             
-            // Добавляем бейдж с количеством для групп
-            // if (group && group.competitors.length > 1) {
-            //   markerHTML += \`<div class="marker-count-badge">\${group.competitors.length}</div>\`;
-            // }
+            let title = '';
+            if (group.hasClient && group.competitors.length > 0) {
+              title = \`Клиент + \${group.competitors.length} конкурентов\`;
+            } else if (group.hasClient) {
+              title = 'Новый клиент';
+            } else if (group.competitors.length > 1) {
+              title = \`Группа конкурентов (\${group.competitors.length})\`;
+            } else if (group.competitors.length === 1) {
+              title = group.competitors[0].name || 'Конкурент';
+            } else {
+              title = 'Точка';
+            }
             
-            markerElement.innerHTML = markerHTML;
             markerElement.title = title;
-  
             const marker = new YMapMarker({ coordinates }, markerElement);
             
-            if (group && groupId) {
-              competitorGroupsData.set(groupId, group);
-              
-              const balloonData = createGroupBalloon(coordinates, group, groupId);
-              
-              balloonContainers.set(markerElement, { 
-                container: balloonData.container, 
-                balloon: balloonData.balloon, 
-                coordinates,
-                groupId 
-              });
-              
-              competitorBalloons.set(markerElement, { 
-                container: balloonData.container, 
-                balloon: balloonData.balloon,
-                toggleBtn: balloonData.toggleBtn,
-                groupId 
-              });
-              
-              markerElement.addEventListener('click', (event) => {
-                event.stopPropagation();
-                activateBalloon(balloonData.container, balloonData.balloon);
-              });
-              
-              setTimeout(() => {
-                updateBalloonPosition(markerElement, balloonData.container);
-              }, 100);
-            }
-  
-            return marker;
-          };
-  
-          // Добавление маркера контрагента
-          if (counterpartyData.latitude && counterpartyData.longitude) {
-            const counterpartyContent = \`
-              <h3>🎯 Новый клиент</h3>
-              <p><strong>Телефон:</strong> \${counterpartyData.phone || '-'}</p>
-              <p><strong>Менеджер:</strong> \${counterpartyData.manager}</p>
-              <p><strong>Адрес:</strong> \${counterpartyData.address}</p>
-              <br/>
-              <p><strong>Цена:</strong> \${counterpartyData.price}</p>
-            \`;
+            // Сохраняем данные группы
+            competitorGroupsData.set(groupId, group);
             
-            const counterpartyMarker = createPinMarker(
-              [counterpartyData.longitude, counterpartyData.latitude],
-              'green',
-              'Контрагент: Новый клиент',
-              null,
-              null
-            );
+            // Создаем балун
+            const balloonData = createCombinedBalloon(group, groupId);
             
-            // Создаем отдельный балун для контрагента
-            const counterpartyBalloonContainer = document.createElement('div');
-            counterpartyBalloonContainer.className = 'balloon-container';
-            counterpartyBalloonContainer.innerHTML = \`
-              <div class="balloon">
-                \${counterpartyContent}
-              </div>
-            \`;
-            balloonsOverlay.appendChild(counterpartyBalloonContainer);
-            counterpartyBalloonContainer.style.display = 'none';
-            
-            balloonContainers.set(counterpartyMarker.element, { 
-              container: counterpartyBalloonContainer, 
-              balloon: counterpartyBalloonContainer.querySelector('.balloon'),
-              coordinates: [counterpartyData.longitude, counterpartyData.latitude]
+            balloonContainers.set(markerElement, { 
+              container: balloonData.container, 
+              balloon: balloonData.balloon, 
+              coordinates,
+              groupId 
             });
             
-            counterpartyMarker.element.addEventListener('click', (event) => {
+            competitorBalloons.set(markerElement, { 
+              container: balloonData.container, 
+              balloon: balloonData.balloon,
+              groupId 
+            });
+            
+            // Обработчик клика на маркер
+            markerElement.addEventListener('click', (event) => {
               event.stopPropagation();
-              const isVisible = counterpartyBalloonContainer.style.display === 'block';
-              counterpartyBalloonContainer.style.display = isVisible ? 'none' : 'block';
-              if (!isVisible) {
-                activateBalloon(counterpartyBalloonContainer, counterpartyBalloonContainer.querySelector('.balloon'));
-              }
+              activateBalloon(balloonData.container, balloonData.balloon);
             });
-            
-            map.addChild(counterpartyMarker);
             
             setTimeout(() => {
-              const balloonData = balloonContainers.get(counterpartyMarker.element);
-              if (balloonData) {
-                balloonData.container.style.display = 'block';
-                activateBalloon(balloonData.container, balloonData.balloon);
-              }
-            }, 1000);
+              updateBalloonPosition(markerElement, balloonData.container);
+            }, 100);
+            
+            return marker;
           }
-  
-          // Добавление маркеров для групп конкурентов
-          Object.entries(competitorGroups).forEach(([groupId, group], index) => {
+
+          // Добавление маркеров для всех групп
+          Object.entries(groups).forEach(([groupId, group], index) => {
             if (group.coordinates) {
-              const competitorMarker = createPinMarker(
+              const marker = createMarker(
                 group.coordinates,
-                'red group',
-                \`Группа конкурентов (\${group.competitors.length})\`,
                 group,
                 groupId
               );
-              map.addChild(competitorMarker);
-              competitorMarkers.push(competitorMarker);
-            }
-          });
-  
-          initializeFilters();
-          updateCheckedStyles();
-          applyFilters(); // Применяем фильтры при инициализации
-  
-          setTimeout(() => {
-            updateInterval = setInterval(updateAllBalloonPositions, 100);
-          }, 100);
-  
-          document.getElementById('map').addEventListener('click', (e) => {
-            if (!e.target.closest('.balloon') && !e.target.closest('.pin-marker') && 
-                !e.target.closest('.filters-panel')) {
-              balloonContainers.forEach((data, markerElement) => {
-                if (markerElement.classList.contains('green')) {
-                  data.container.style.display = 'none';
-                }
-              });
+              map.addChild(marker);
+              competitorMarkers.push(marker);
               
-              if (currentActiveContainer) {
-                currentActiveContainer.classList.remove('active');
-                currentActiveContainer.querySelector('.balloon').classList.remove('active');
-                currentActiveContainer = null;
+              // Активируем балун для первой группы с клиентом
+              if (group.hasClient && index === 0) {
+                setTimeout(() => {
+                  const balloonData = balloonContainers.get(marker.element);
+                  if (balloonData) {
+                    activateBalloon(balloonData.container, balloonData.balloon);
+                  }
+                }, 1000);
               }
             }
           });
+
+          initializeFilters();
+          updateCheckedStyles();
+          applyFilters(); // Применяем фильтры при инициализации
+
+          setTimeout(() => {
+            updateInterval = setInterval(updateAllBalloonPositions, 100);
+          }, 100);
           
           window.addEventListener('resize', updateAllBalloonPositions);
-  
+
           window.addEventListener('beforeunload', () => {
             if (updateInterval) {
               clearInterval(updateInterval);
@@ -1356,28 +1425,62 @@ export class MapRenderer {
         `
   }
 
-  // Вспомогательный метод для группировки конкурентов по координатам
+  // Вспомогательный метод для группировки конкурентов по координатам с учетом контрагента
   private static groupCompetitorsByCoordinates(
-    competitors: any[]
+    competitors: any[],
+    counterpartyData: any
   ): Record<string, any> {
     const groups: Record<string, any> = {}
 
+    // Обрабатываем нового клиента
+    if (
+      counterpartyData.latitude &&
+      counterpartyData.longitude &&
+      counterpartyData.latitude !== 0 &&
+      counterpartyData.longitude !== 0
+    ) {
+      const clientKey = `${counterpartyData.longitude.toFixed(
+        6
+      )}_${counterpartyData.latitude.toFixed(6)}`
+
+      if (!groups[clientKey]) {
+        groups[clientKey] = {
+          coordinates: [counterpartyData.longitude, counterpartyData.latitude],
+          hasClient: true,
+          clientData: {
+            ...counterpartyData,
+            id: 'client',
+            isClient: true,
+          },
+          competitors: [],
+        }
+      } else {
+        groups[clientKey].hasClient = true
+        groups[clientKey].clientData = {
+          ...counterpartyData,
+          id: 'client',
+          isClient: true,
+        }
+      }
+    }
+
+    // Обрабатываем конкурентов
     competitors.forEach((competitor, index) => {
-      // Проверяем, есть ли у конкурента координаты
       if (
         competitor.latitude &&
         competitor.longitude &&
         competitor.latitude !== 0 &&
         competitor.longitude !== 0
       ) {
-        // Создаем ключ на основе координат
         const key = `${competitor.longitude.toFixed(
           6
-        )}_\${competitor.latitude.toFixed(6)}`
+        )}_${competitor.latitude.toFixed(6)}`
 
         if (!groups[key]) {
           groups[key] = {
             coordinates: [competitor.longitude, competitor.latitude],
+            hasClient: false,
+            clientData: null,
             competitors: [],
           }
         }
@@ -1385,16 +1488,20 @@ export class MapRenderer {
         groups[key].competitors.push({
           ...competitor,
           id: competitor.id || `comp_${index}`,
+          isClient: false,
         })
       } else {
-        // Для конкурентов без координат создаем отдельную группу
+        // Для конкурентов без координат создаем отдельную группу без координат
         const noCoordsKey = `no_coords_${index}`
         groups[noCoordsKey] = {
           coordinates: null,
+          hasClient: false,
+          clientData: null,
           competitors: [
             {
               ...competitor,
               id: competitor.id || `comp_${index}`,
+              isClient: false,
             },
           ],
         }
