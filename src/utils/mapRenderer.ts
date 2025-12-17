@@ -366,6 +366,29 @@ export class MapRenderer {
           fill: orangered;
         }
         
+        /* Стили для counter на маркере */
+        .marker-count-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background: #dc3545;
+          color: white;
+          font-size: 11px;
+          font-weight: bold;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid white;
+          z-index: 3;
+        }
+        
+        .marker-count-badge.hidden {
+          display: none !important;
+        }
+        
         .hidden-marker {
           display: none !important;
         }
@@ -393,7 +416,7 @@ export class MapRenderer {
         }
         
         .filters-panel.compact {
-          height: 155px;
+          height: 200px;
           overflow: hidden;
         }
         
@@ -464,6 +487,9 @@ export class MapRenderer {
           padding-top: 8px;
           border-top: 1px solid rgba(255, 255, 255, 0.3);
           flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
         
         .reset-filters {
@@ -481,6 +507,23 @@ export class MapRenderer {
         
         .reset-filters:hover {
           background: #5a6268;
+        }
+        
+        .toggle-cards-btn {
+          background: #2c7c3e;
+          color: white;
+          border: none;
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          width: 100%;
+          transition: background 0.2s;
+          flex-shrink: 0;
+        }
+        
+        .toggle-cards-btn:hover {
+          background: #218838;
         }
         
         .filters-stats {
@@ -772,6 +815,7 @@ export class MapRenderer {
         let competitorMarkers = [];
         let competitorBalloons = new Map();
         let competitorGroupsData = new Map();
+        let allCardsVisible = true; // Начальное состояние - все карточки видны
 
         ymaps3.ready.then(() => {
           const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
@@ -867,6 +911,7 @@ export class MapRenderer {
             
             <div class="filters-actions" id="filtersActions">
               <button class="reset-filters" id="resetFilters">Сбросить фильтры</button>
+              <button class="toggle-cards-btn" id="toggleCardsBtn">Скрыть все карточки</button>
             </div>
             
             <div class="filters-stats">
@@ -990,7 +1035,8 @@ export class MapRenderer {
             }
             
             // Добавляем секцию конкурентов только если есть конкуренты
-            if (group.competitors.length > 0) {
+            const hasCompetitors = group.competitors && group.competitors.length > 0;
+            if (hasCompetitors) {
               // HTML для секций конкурентов
               const competitorsSectionsHTML = group.competitors
                 .map((competitor, index) => generateCompetitorSectionHTML(competitor, index))
@@ -1021,14 +1067,15 @@ export class MapRenderer {
               contentHTML = '<p>Нет данных для отображения</p>';
             }
             
-            const balloonContent = contentHTML;
-            
             const balloon = document.createElement('div');
             balloon.className = 'balloon competitor-balloon';
             if (group.hasClient) {
               balloon.classList.add('has-client');
             }
-            balloon.innerHTML = balloonContent;
+            balloon.innerHTML = contentHTML;
+            
+            // Сохраняем информацию о наличии конкурентов в контейнере
+            balloonContainer.dataset.hasCompetitors = hasCompetitors;
             
             balloonContainer.appendChild(balloon);
             balloonsOverlay.appendChild(balloonContainer);
@@ -1091,6 +1138,139 @@ export class MapRenderer {
             return { container: balloonContainer, balloon: balloon };
           }
 
+          // Функция для обновления counter на маркере
+          function updateMarkerCounter(markerElement, group) {
+            // Подсчитываем количество видимых конкурентов с учетом фильтров
+            const visibleCompetitorsCount = group.competitors.filter(c => competitorMatchesFilters(c)).length;
+            
+            // Ищем существующий counter или создаем новый
+            let counterBadge = markerElement.querySelector('.marker-count-badge');
+            
+            if (!counterBadge && (visibleCompetitorsCount > 0 || group.competitors.length > 0)) {
+              counterBadge = document.createElement('div');
+              counterBadge.className = 'marker-count-badge';
+              markerElement.appendChild(counterBadge);
+            }
+            
+            if (counterBadge) {
+              // ВАЖНОЕ ИЗМЕНЕНИЕ: показываем counter только если есть видимые конкуренты
+              if (visibleCompetitorsCount > 0) {
+                // Показываем количество видимых конкурентов
+                counterBadge.textContent = visibleCompetitorsCount;
+                counterBadge.classList.remove('hidden');
+              } else {
+                // Скрываем counter, если нет видимых конкурентов
+                counterBadge.classList.add('hidden');
+              }
+            }
+          }
+
+          // Функция для переключения видимости всех карточек
+          function toggleAllCards() {
+            allCardsVisible = !allCardsVisible;
+            const toggleBtn = document.getElementById('toggleCardsBtn');
+            
+            if (allCardsVisible) {
+              toggleBtn.textContent = 'Скрыть все карточки';
+            } else {
+              toggleBtn.textContent = 'Показать все карточки';
+            }
+            
+            // Обновляем видимость балунов и маркеров
+            updateCardsVisibility();
+          }
+
+          // Функция для обновления видимости карточек
+          function updateCardsVisibility() {
+            competitorMarkers.forEach((marker, index) => {
+              const groupId = marker.element.dataset.groupId;
+              const group = competitorGroupsData.get(groupId);
+              
+              if (!group) return;
+              
+              // Получаем контейнер балуна
+              const balloonData = competitorBalloons.get(marker.element);
+              if (!balloonData || !balloonData.container) return;
+              
+              // Проверяем, есть ли видимые конкуренты после применения фильтров
+              const visibleCompetitorsInGroup = group.competitors.filter(c => competitorMatchesFilters(c));
+              const visibleCompetitorsCountInGroup = visibleCompetitorsInGroup.length;
+              const hasVisibleCompetitors = visibleCompetitorsCountInGroup > 0;
+              const hasClient = group.hasClient;
+              const hasCompetitors = group.competitors && group.competitors.length > 0;
+              
+              if (allCardsVisible) {
+                // Показываем карточки в зависимости от типа группы
+                if (hasClient) {
+                  // Для балуна с клиентом всегда показываем контейнер
+                  balloonData.container.style.display = 'block';
+                  
+                  // Показываем секцию конкурентов только если есть конкуренты И они видны после фильтров
+                  const competitorsSection = balloonData.container.querySelector('.competitors-section');
+                  if (competitorsSection) {
+                    if (hasCompetitors && hasVisibleCompetitors) {
+                      competitorsSection.classList.remove('hidden-section');
+                    } else {
+                      competitorsSection.classList.add('hidden-section');
+                    }
+                  }
+                  
+                  // Скрываем counter на маркере при видимых карточках
+                  const counterBadge = marker.element.querySelector('.marker-count-badge');
+                  if (counterBadge) {
+                    counterBadge.classList.add('hidden');
+                  }
+                } else {
+                  // Для балунов только с конкурентами показываем только если есть видимые конкуренты
+                  if (hasVisibleCompetitors) {
+                    balloonData.container.style.display = 'block';
+                  } else {
+                    balloonData.container.style.display = 'none';
+                  }
+                  
+                  // Скрываем counter на маркере при видимых карточках
+                  const counterBadge = marker.element.querySelector('.marker-count-badge');
+                  if (counterBadge) {
+                    counterBadge.classList.add('hidden');
+                  }
+                }
+                
+              } else {
+                // Скрываем все карточки конкурентов
+                if (hasClient) {
+                  // Для балуна с клиентом показываем только секцию клиента
+                  balloonData.container.style.display = 'block';
+                  
+                  // Скрываем секцию конкурентов
+                  const competitorsSection = balloonData.container.querySelector('.competitors-section');
+                  if (competitorsSection) {
+                    competitorsSection.classList.add('hidden-section');
+                  }
+                  
+                  // ВАЖНОЕ ИЗМЕНЕНИЕ: Обновляем counter на маркере для групп с клиентом и конкурентами
+                  // Показываем counter если есть видимые конкуренты
+                  updateMarkerCounter(marker.element, group);
+                } else {
+                  // Для балунов только с конкурентами скрываем весь балун
+                  balloonData.container.style.display = 'none';
+                  
+                  // Показываем counter на маркере для групп с конкурентами
+                  updateMarkerCounter(marker.element, group);
+                }
+              }
+            });
+            
+            // Если текущий активный балун скрыт, деактивируем его
+            if (currentActiveContainer && currentActiveContainer.style.display === 'none') {
+              currentActiveContainer.classList.remove('active');
+              currentActiveContainer.querySelector('.balloon')?.classList.remove('active');
+              currentActiveContainer = null;
+            }
+            
+            // Обновляем позиции всех видимых балунов
+            updateAllBalloonPositions();
+          }
+
           function updateCheckedStyles() {
             const pricesContainer = document.getElementById('pricesContainer');
             if (!pricesContainer) return;
@@ -1132,9 +1312,10 @@ export class MapRenderer {
               const hasClient = group.hasClient;
               const visibleCompetitorsInGroup = group.competitors.filter(c => competitorMatchesFilters(c));
               const visibleCompetitorsCountInGroup = visibleCompetitorsInGroup.length;
+              const hasVisibleCompetitors = visibleCompetitorsCountInGroup > 0;
               
               // Группа видима если есть клиент ИЛИ есть видимые конкуренты
-              const shouldBeVisible = hasClient || visibleCompetitorsCountInGroup > 0;
+              const shouldBeVisible = hasClient || hasVisibleCompetitors;
               
               // Скрываем/показываем маркер
               if (marker.element) {
@@ -1151,7 +1332,7 @@ export class MapRenderer {
               const balloonData = competitorBalloons.get(marker.element);
               if (balloonData && balloonData.container) {
                 const competitorsContainer = balloonData.container.querySelector('.competitors-group');
-                if (competitorsContainer && group.competitors.length > 0) {
+                if (competitorsContainer && group.competitors && group.competitors.length > 0) {
                   const sections = competitorsContainer.querySelectorAll('.competitor-section');
                   
                   sections.forEach((section, idx) => {
@@ -1173,26 +1354,16 @@ export class MapRenderer {
                   if (titleBadge) {
                     titleBadge.textContent = visibleCompetitorsCountInGroup;
                   }
-                  
-                  // Проверяем, нужно ли скрыть всю секцию конкурентов
-                  const competitorsSection = balloonData.container.querySelector('.competitors-section');
-                  if (competitorsSection) {
-                    if (visibleCompetitorsCountInGroup > 0) {
-                      competitorsSection.classList.remove('hidden-section');
-                    } else {
-                      competitorsSection.classList.add('hidden-section');
-                    }
-                  }
                 }
-                
-                // Балуны всегда видны, скрываем только маркеры
-                balloonData.container.style.display = 'block';
               }
             });
             
             // Обновляем статистику в панели фильтров
             document.getElementById('visibleCompetitorsCount').textContent = visibleCompetitorsCount;
             updateCheckedStyles();
+            
+            // Обновляем видимость карточек с учетом новых фильтров
+            updateCardsVisibility();
           }
 
           function initializeFilters() {
@@ -1235,6 +1406,9 @@ export class MapRenderer {
               
               applyFilters();
             });
+            
+            // Обработчик для кнопки переключения видимости карточек
+            document.getElementById('toggleCardsBtn').addEventListener('click', toggleAllCards);
           }
 
           const getMarkerScreenPosition = (markerElement) => {
@@ -1255,14 +1429,18 @@ export class MapRenderer {
 
           const updateAllBalloonPositions = () => {
             balloonContainers.forEach((data, markerElement) => {
-              updateBalloonPosition(markerElement, data.container);
+              // Обновляем позицию только если контейнер видим и маркер не скрыт
+              if (data.container.style.display !== 'none' && 
+                  !markerElement.classList.contains('hidden-marker')) {
+                updateBalloonPosition(markerElement, data.container);
+              }
             });
           };
 
           const activateBalloon = (container, balloon) => {
             if (currentActiveContainer && currentActiveContainer !== container) {
               currentActiveContainer.classList.remove('active');
-              currentActiveContainer.querySelector('.balloon').classList.remove('active');
+              currentActiveContainer.querySelector('.balloon')?.classList.remove('active');
             }
             
             container.classList.add('active');
@@ -1285,7 +1463,7 @@ export class MapRenderer {
             let markerClass = 'pin-marker';
             let pathFill = 'orangered'; // по умолчанию красный
             
-            if (group.hasClient && group.competitors.length > 0) {
+            if (group.hasClient && group.competitors && group.competitors.length > 0) {
               // Комбинированный маркер - создаем два отдельных path
               markerClass = 'pin-marker combined';
               
@@ -1340,13 +1518,13 @@ export class MapRenderer {
             markerElement.appendChild(svg);
             
             let title = '';
-            if (group.hasClient && group.competitors.length > 0) {
+            if (group.hasClient && group.competitors && group.competitors.length > 0) {
               title = \`Клиент + \${group.competitors.length} конкурентов\`;
             } else if (group.hasClient) {
               title = 'Новый клиент';
-            } else if (group.competitors.length > 1) {
+            } else if (group.competitors && group.competitors.length > 1) {
               title = \`Группа конкурентов (\${group.competitors.length})\`;
-            } else if (group.competitors.length === 1) {
+            } else if (group.competitors && group.competitors.length === 1) {
               title = group.competitors[0].name || 'Конкурент';
             } else {
               title = 'Точка';
@@ -1377,7 +1555,10 @@ export class MapRenderer {
             // Обработчик клика на маркер
             markerElement.addEventListener('click', (event) => {
               event.stopPropagation();
-              activateBalloon(balloonData.container, balloonData.balloon);
+              // Активируем балун только если он видим
+              if (balloonData.container.style.display !== 'none') {
+                activateBalloon(balloonData.container, balloonData.balloon);
+              }
             });
             
             setTimeout(() => {
