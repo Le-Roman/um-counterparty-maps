@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import MapStorage from '../storage/MapStorage'
+import MapStorage from '../storage/CompetitorsMapStorage'
 import { validateMapData } from '../middleware/validation'
 import { AuthenticatedRequest } from '../middleware/security'
 import { amqpService } from '../services/amqp.service'
-import { MapRequestData, Queue } from '../types'
+import { CompetitorsMapRequestData, Queue } from '../types'
 import { geocodeAddress } from '../services/geocoding.service'
 import {
   getFixedCoordinatesEntities,
@@ -18,7 +18,7 @@ router.post(
   validateMapData,
   async (req: AuthenticatedRequest, res) => {
     try {
-      const originalData = req.body as MapRequestData
+      const originalData = req.body as CompetitorsMapRequestData
       const mapData = structuredClone(originalData)
 
       // Собираем все элементы для геокодирования

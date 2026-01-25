@@ -1,9 +1,9 @@
-import { MapRequestData } from '../types'
+import { CompetitorsMapRequestData } from '../types'
 
 export const generateMockCompanies = (
   count: number = 5
-): MapRequestData['competitors'] => {
-  const companies: MapRequestData['competitors'] = []
+): CompetitorsMapRequestData['competitors'] => {
+  const companies: CompetitorsMapRequestData['competitors'] = []
   const names = [
     'ООО Ромашка',
     'ИП Сидоров',

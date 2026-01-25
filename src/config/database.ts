@@ -1,24 +1,37 @@
 import { Sequelize } from 'sequelize'
-import { initCounterpartyModel } from '../models/Counterparty'
-import { initCompetitorModel } from '../models/Competitor'
-import { initYandexApiKeyModel } from '../models/YandexApiKey'
+import { initCounterpartyModel } from '../db/models/Counterparty'
+import { initCompetitorModel } from '../db/models/Competitor'
+import { initYandexApiKeyModel } from '../db/models/YandexApiKey'
 import { initializeLimitResetScheduler } from '../utils/limitResetScheduler'
+import dbConfig from '../db/config'
+
+// Определяем конфигурацию подключения на основе NODE_ENV
+const getSequelizeConfig = () => {
+  const env = process.env.NODE_ENV || 'development'
+
+  // Используем конфиг из файла конфигурации
+  const config = dbConfig[env]
+
+  if (!config) {
+    throw new Error(
+      `Конфигурация для среды ${env} не найдена в src/db/config/config.js`
+    )
+  }
+
+  return config
+}
+
+const config = getSequelizeConfig()
+const { database, username, password, host, ...options } = config
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'maps_db',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
+  database as string,
+  username as string,
+  password as string,
   {
-    host: process.env.DB_HOST || 'localhost',
-    dialect: 'mysql',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-    timezone: '+03:00', // Московское время
+    host: host as string,
+    // Дополнительные опции из конфига
+    ...options,
   }
 )
 
@@ -43,9 +56,6 @@ export const initializeDatabase = async (): Promise<void> => {
 
     await sequelize.authenticate()
     console.log('✅ База данных подключена')
-
-    await sequelize.sync({ force: process.env.NODE_ENV === 'development' })
-    console.log('✅ Модели синхронизированы')
   } catch (error) {
     console.error('❌ Ошибка подключения к БД:', error)
     throw error

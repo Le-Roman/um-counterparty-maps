@@ -23,7 +23,7 @@ export interface Competitor {
   phone: string
 }
 
-export interface MapRequestData extends Counterparty {
+export interface CompetitorsMapRequestData extends Counterparty {
   competitors: Omit<Competitor, 'id' | 'counterpartyGuid'>[]
 }
 

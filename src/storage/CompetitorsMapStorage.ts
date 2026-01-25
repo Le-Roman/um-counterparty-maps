@@ -1,13 +1,10 @@
 import sequelize from '../config/database'
-import CounterpartyModel from '../models/Counterparty'
-import CompetitorModel from '../models/Competitor'
-import {
-  MapRequestData,
-  CounterpartyInstance,
-} from '../types'
+import CounterpartyModel from '../db/models/Counterparty'
+import CompetitorModel from '../db/models/Competitor'
+import { CompetitorsMapRequestData, CounterpartyInstance } from '../types'
 
-export class MapStorage {
-  async createOrUpdate(mapData: MapRequestData): Promise<{
+export class CompetitorsMapStorage {
+  async createOrUpdate(mapData: CompetitorsMapRequestData): Promise<{
     success: boolean
     data?: CounterpartyInstance
     error?: string
@@ -182,4 +179,4 @@ export class MapStorage {
   }
 }
 
-export default new MapStorage()
+export default new CompetitorsMapStorage()

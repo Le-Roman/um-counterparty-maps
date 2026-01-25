@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import MapStorage from '../storage/MapStorage'
-import { MapRenderer } from '../utils/mapRenderer'
+import MapStorage from '../storage/CompetitorsMapStorage'
+import { CompetitorsMapRenderer } from '../utils/competitorsMapRenderer'
 
 const router = Router()
 
@@ -31,9 +31,7 @@ router.get('/competitors/:guid', async (req, res) => {
       `)
     }
 
-    const useYandex =
-      process.env.NODE_ENV === 'production' || req.query.engine === 'yandex'
-    const html = MapRenderer.generateHTML(guid, result.data, useYandex)
+    const html = CompetitorsMapRenderer.generateHTML(guid, result.data)
     res.send(html)
   } catch (error) {
     console.error('Ошибка загрузки карты:', error)

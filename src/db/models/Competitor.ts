@@ -1,7 +1,7 @@
 import moment from 'moment'
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize'
-import { Competitor } from '../types'
-import { formatAmount } from '../utils/formatAmount'
+import { Competitor } from '../../types'
+import { formatAmount } from '../../utils/formatAmount'
 
 interface CompetitorAttributes extends Competitor {
   formatted_revenue_last_3_months?: string

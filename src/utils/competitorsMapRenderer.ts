@@ -1,11 +1,7 @@
 import { CounterpartyInstance } from '../types'
 
-export class MapRenderer {
-  static generateHTML(
-    guid: string,
-    data: CounterpartyInstance,
-    useYandex: boolean = true
-  ): string {
+export class CompetitorsMapRenderer {
+  static generateHTML(guid: string, data: CounterpartyInstance): string {
     if (!process.env.YANDEX_API_KEY) return 'Не задан API KEY'
     return this.generateYandexMapHTML(guid, data)
   }

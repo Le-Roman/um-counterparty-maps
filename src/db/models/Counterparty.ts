@@ -1,5 +1,5 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize'
-import { Counterparty } from '../types'
+import { Counterparty } from '../../types'
 
 type CounterpartyAttributes = Counterparty
 

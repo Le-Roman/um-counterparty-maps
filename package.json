@@ -14,7 +14,9 @@
     "db:migrate:dev": "cross-env NODE_ENV=development npx sequelize-cli db:migrate",
     "db:migrate:undo:all:dev": "cross-env NODE_ENV=development npx sequelize-cli db:migrate:undo:all",
     "db:migrate:prod": "cross-env NODE_ENV=production npx sequelize-cli db:migrate",
-    "db:migrate:undo:all:prod": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:undo:all"
+    "db:migrate:undo:all:prod": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:undo:all",
+    "db:migrate:status:prod": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:status",
+    "db:create:migration": "npx sequelize-cli migration:generate --name"
   },
   "dependencies": {
     "amqplib": "0.10.5",

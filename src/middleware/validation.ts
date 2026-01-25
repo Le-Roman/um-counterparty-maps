@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express'
-import { MapRequestData } from '../types'
+import { CompetitorsMapRequestData } from '../types'
 
 export const validateMapData = (
   req: Request,
   res: Response,
   next: NextFunction
 ): Response | void => {
-  const data: MapRequestData = req.body
+  const data: CompetitorsMapRequestData = req.body
 
   // Проверка обязательных полей контрагента
   if (!data.guid || typeof data.guid !== 'string') {

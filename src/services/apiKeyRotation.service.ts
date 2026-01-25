@@ -1,5 +1,5 @@
 import Sequelize from 'sequelize'
-import YandexApiKeyModel from '../models/YandexApiKey'
+import YandexApiKeyModel from '../db/models/YandexApiKey'
 import sequelize from '../config/database'
 
 export class ApiKeyRotationService {
