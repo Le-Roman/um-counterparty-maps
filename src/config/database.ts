@@ -1,6 +1,9 @@
 import { Sequelize } from 'sequelize'
 import { initCounterpartyModel } from '../db/models/Counterparty'
 import { initCompetitorModel } from '../db/models/Competitor'
+import { initClientRequestModel } from '../db/models/ClientRequest'
+import { initPartnerModel } from '../db/models/Partner'
+import { initPartnerProductModel } from '../db/models/PartnerProduct'
 import { initYandexApiKeyModel } from '../db/models/YandexApiKey'
 import { initializeLimitResetScheduler } from '../utils/limitResetScheduler'
 import dbConfig from '../db/config'
@@ -38,10 +41,11 @@ const sequelize = new Sequelize(
 // Инициализация моделей и связей
 export const initializeDatabase = async (): Promise<void> => {
   try {
-    // Инициализация моделей
+    initYandexApiKeyModel(sequelize)
+
+    // Инициализация моделей для конкурентов
     const Counterparty = initCounterpartyModel(sequelize)
     const Competitor = initCompetitorModel(sequelize)
-    const YandexApiKey = initYandexApiKeyModel(sequelize)
 
     // Настройка связей
     Counterparty.hasMany(Competitor, {
@@ -52,6 +56,32 @@ export const initializeDatabase = async (): Promise<void> => {
     Competitor.belongsTo(Counterparty, {
       foreignKey: 'counterpartyGuid',
       as: 'counterparty',
+    })
+
+    // Инициализация моделей для партнеров
+    const ClientRequest = initClientRequestModel(sequelize)
+    const Partner = initPartnerModel(sequelize)
+    const PartnerProduct = initPartnerProductModel(sequelize)
+
+    // Настройка связей
+    ClientRequest.hasMany(Partner, {
+      foreignKey: 'client_request_guid',
+      as: 'partners',
+    })
+
+    Partner.belongsTo(ClientRequest, {
+      foreignKey: 'client_request_guid',
+      as: 'clientRequest',
+    })
+
+    Partner.hasMany(PartnerProduct, {
+      foreignKey: 'partner_guid',
+      as: 'products',
+    })
+
+    PartnerProduct.belongsTo(Partner, {
+      foreignKey: 'partner_guid',
+      as: 'partner',
     })
 
     await sequelize.authenticate()

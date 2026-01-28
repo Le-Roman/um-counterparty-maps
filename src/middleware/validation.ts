@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { CompetitorsMapRequestData } from '../types'
+import { CompetitorsMapRequestData, ClientRequestData } from '../types'
 
 export const validateMapData = (
   req: Request,
@@ -110,6 +110,50 @@ export const validateMapData = (
       //       })
       //     }
       //   }
+    }
+  }
+
+  next()
+}
+
+export const validatePartnerData = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Response | void => {
+  const data = req.body as ClientRequestData
+
+  // Проверка обязательных полей
+  if (!data.guid || !data.buyer_name || !data.address) {
+    return res.status(400).json({
+      success: false,
+      error: 'Проверьте обязательные поля: guid, buyer_name, address',
+    })
+  }
+
+  // Проверка структуры партнеров
+  if (!Array.isArray(data.partner)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Поле partner должно быть массивом',
+    })
+  }
+
+  // Проверка каждого партнера
+  for (const partner of data.partner) {
+    if (!partner.name || !partner.address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Проверьте обязательные поля у партнеров: name, address',
+      })
+    }
+
+    // Проверка товаров партнера
+    if (partner.products && !Array.isArray(partner.products)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Поле products у партнера должно быть массивом',
+      })
     }
   }
 
