@@ -140,6 +140,20 @@ export const initPartnerModel = (sequelize: Sequelize): typeof PartnerModel => {
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
+      indexes: [
+        {
+          name: 'idx_partners_client_request_guid',
+          fields: ['client_request_guid'],
+        },
+        {
+          name: 'idx_partners_guid',
+          fields: ['guid'],
+        },
+        {
+          name: 'idx_partners_priority',
+          fields: ['priority'],
+        },
+      ],
     }
   )
 

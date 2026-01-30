@@ -123,14 +123,13 @@ module.exports = {
         },
       })
 
-      await queryInterface.addIndex(
-        'partners',
-        ['guid', 'client_request_guid'],
-        {
-          name: 'idx_partners_guid_client_request',
-          unique: true,
-        }
-      )
+      await queryInterface.addIndex('partners', ['client_request_guid'], {
+        name: 'idx_partners_client_request_guid',
+      })
+
+      await queryInterface.addIndex('partners', ['guid'], {
+        name: 'idx_partners_guid',
+      })
 
       await queryInterface.addIndex('partners', ['priority'], {
         name: 'idx_partners_priority',

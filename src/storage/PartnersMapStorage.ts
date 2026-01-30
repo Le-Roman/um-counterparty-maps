@@ -37,7 +37,7 @@ export class PartnersMapStorage {
           date,
           population,
           variant_map,
-          partnerGuid,
+          partnerGuid: partnerGuid || null,
           buyer_name,
           phone,
           address,
@@ -47,20 +47,20 @@ export class PartnersMapStorage {
         { transaction }
       )
 
-      // 2. Вместо удаления всех старых партнеров, обновляем существующих
-      // и добавляем новых, если guid уже существует
+      // 2. Создаем/обновляем партнеров с учетом адреса
       for (const partnerData of partner) {
-        // Пытаемся найти существующего партнера с таким guid
+        // Поиск по всем трем полям: guid + client_request_guid + address
         const existingPartner = await PartnerModel.findOne({
           where: {
             guid: partnerData.guid,
-            client_request_guid: guid, // ищем только в рамках этой заявки
+            client_request_guid: guid,
+            address: partnerData.address,
           },
           transaction,
         })
 
         if (existingPartner) {
-          // Обновляем существующего партнера
+          // Обновляем существующего партнера с тем же адресом
           await existingPartner.update(
             {
               name: partnerData.name,
@@ -70,7 +70,6 @@ export class PartnersMapStorage {
               email: partnerData.email,
               manager: partnerData.manager,
               relationship_type: partnerData.relationship_type,
-              address: partnerData.address,
               latitude: partnerData.latitude,
               longitude: partnerData.longitude,
               revenue_last_n_months: partnerData.revenue_last_n_months,
@@ -82,7 +81,7 @@ export class PartnersMapStorage {
             { transaction }
           )
         } else {
-          // Создаем нового партнера (даже если guid уже существует в другой заявке)
+          // Создаем нового партнера (возможно с тем же guid, но другим адресом)
           await PartnerModel.create(
             {
               guid: partnerData.guid,
@@ -108,25 +107,34 @@ export class PartnersMapStorage {
         }
       }
 
-      // 3. Удаляем только тех партнеров, которые больше не пришли в данных
-      // (но с одинаковым guid могут быть дубли в других заявках)
-      const incomingPartnerGuids = partner.map((p) => p.guid)
-      await PartnerModel.destroy({
-        where: {
-          client_request_guid: guid,
-          guid: {
-            [Op.notIn]: incomingPartnerGuids,
-          },
-        },
+      // 3. Удаляем партнеров, которых больше нет в данных
+      // Нужно сравнивать по guid + address
+      const incomingPartnerKeys = partner.map(
+        (p) => `${p.guid}|${p.address}` // Создаем ключ из guid и адреса
+      )
+
+      // Находим всех текущих партнеров заявки
+      const currentPartners = await PartnerModel.findAll({
+        where: { client_request_guid: guid },
         transaction,
       })
 
+      // Удаляем тех, чей ключ (guid+address) отсутствует в новых данных
+      for (const currentPartner of currentPartners) {
+        const currentKey = `${currentPartner.guid}|${currentPartner.address}`
+        if (!incomingPartnerKeys.includes(currentKey)) {
+          await currentPartner.destroy({ transaction })
+        }
+      }
+
       // 4. Обновляем товары партнеров
       for (const partnerData of partner) {
+        // Находим партнера по всем трем критериям
         const partnerRecord = await PartnerModel.findOne({
           where: {
             guid: partnerData.guid,
             client_request_guid: guid,
+            address: partnerData.address,
           },
           transaction,
         })
@@ -155,7 +163,7 @@ export class PartnersMapStorage {
 
       await transaction.commit()
 
-      // 5. Получаем полные данные с партнерами
+      // 5. Получаем обновленные данные
       const fullData = await ClientRequestModel.findByPk(guid, {
         include: [
           {
@@ -239,7 +247,6 @@ export class PartnersMapStorage {
   }> {
     try {
       const clientRequest = await ClientRequestModel.findByPk(requestGuid)
-
       if (!clientRequest) {
         return {
           success: false,
@@ -255,24 +262,24 @@ export class PartnersMapStorage {
         }
       }
 
-      if (process.env.ALLOW_EXTERNAL_API === 'true') {
-        const client = await soap.createClientAsync(
-          process.env.TRANSFER_CLIENTS_SOAP_URL as string,
-          {
-            wsdl_headers: {
-              Authorization: `Basic ${stringToBase64(
-                `${process.env.USERNAME_1C}:${process.env.PASSWORD_1C}`
-              )}`,
-            },
-          }
-        )
+      if (process.env.ALLOW_EXTERNAL_API !== 'true') {
+        // const client = await soap.createClientAsync(
+        //   process.env.TRANSFER_CLIENTS_SOAP_URL as string,
+        //   {
+        //     wsdl_headers: {
+        //       Authorization: `Basic ${stringToBase64(
+        //         `${process.env.USERNAME_1C}:${process.env.PASSWORD_1C}`
+        //       )}`,
+        //     },
+        //   }
+        // )
 
-        client.setSecurity(
-          new soap.BasicAuthSecurity(
-            process.env.USERNAME_1C as string,
-            process.env.PASSWORD_1C as string
-          )
-        )
+        // client.setSecurity(
+        //   new soap.BasicAuthSecurity(
+        //     process.env.USERNAME_1C as string,
+        //     process.env.PASSWORD_1C as string
+        //   )
+        // )
 
         // const [result] = await client.AssignClientAsync({
         //   data: JSON.stringify({
@@ -295,7 +302,7 @@ export class PartnersMapStorage {
 
       return {
         success: false,
-        message: 'Отключен доступ к API',
+        error: 'Отключен доступ к API',
       }
     } catch (error) {
       console.error('Ошибка передачи клиента:', error)
