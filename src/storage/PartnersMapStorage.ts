@@ -1,8 +1,11 @@
+import * as soap from 'soap'
+import { Op } from 'sequelize'
 import sequelize from '../config/database'
 import ClientRequestModel from '../db/models/ClientRequest'
 import PartnerModel from '../db/models/Partner'
 import PartnerProductModel from '../db/models/PartnerProduct'
 import { ClientRequestData, ClientRequestInstance } from '../types'
+import { stringToBase64 } from '../utils/stringToBase64'
 
 export class PartnersMapStorage {
   async createOrUpdate(mapData: ClientRequestData): Promise<{
@@ -44,42 +47,107 @@ export class PartnersMapStorage {
         { transaction }
       )
 
-      // 2. Удаляем старых партнеров (если они есть)
+      // 2. Вместо удаления всех старых партнеров, обновляем существующих
+      // и добавляем новых, если guid уже существует
+      for (const partnerData of partner) {
+        // Пытаемся найти существующего партнера с таким guid
+        const existingPartner = await PartnerModel.findOne({
+          where: {
+            guid: partnerData.guid,
+            client_request_guid: guid, // ищем только в рамках этой заявки
+          },
+          transaction,
+        })
+
+        if (existingPartner) {
+          // Обновляем существующего партнера
+          await existingPartner.update(
+            {
+              name: partnerData.name,
+              price: partnerData.price,
+              priority: partnerData.priority,
+              phone: partnerData.phone,
+              email: partnerData.email,
+              manager: partnerData.manager,
+              relationship_type: partnerData.relationship_type,
+              address: partnerData.address,
+              latitude: partnerData.latitude,
+              longitude: partnerData.longitude,
+              revenue_last_n_months: partnerData.revenue_last_n_months,
+              last_sale_date: partnerData.last_sale_date,
+              clients_transferred: partnerData.clients_transferred,
+              clients_in_progress: partnerData.clients_in_progress,
+              clients_converted: partnerData.clients_converted,
+            },
+            { transaction }
+          )
+        } else {
+          // Создаем нового партнера (даже если guid уже существует в другой заявке)
+          await PartnerModel.create(
+            {
+              guid: partnerData.guid,
+              name: partnerData.name,
+              price: partnerData.price,
+              priority: partnerData.priority,
+              phone: partnerData.phone,
+              email: partnerData.email,
+              manager: partnerData.manager,
+              relationship_type: partnerData.relationship_type,
+              address: partnerData.address,
+              latitude: partnerData.latitude,
+              longitude: partnerData.longitude,
+              revenue_last_n_months: partnerData.revenue_last_n_months,
+              last_sale_date: partnerData.last_sale_date,
+              clients_transferred: partnerData.clients_transferred,
+              clients_in_progress: partnerData.clients_in_progress,
+              clients_converted: partnerData.clients_converted,
+              client_request_guid: guid,
+            },
+            { transaction }
+          )
+        }
+      }
+
+      // 3. Удаляем только тех партнеров, которые больше не пришли в данных
+      // (но с одинаковым guid могут быть дубли в других заявках)
+      const incomingPartnerGuids = partner.map((p) => p.guid)
       await PartnerModel.destroy({
-        where: { client_request_guid: guid },
+        where: {
+          client_request_guid: guid,
+          guid: {
+            [Op.notIn]: incomingPartnerGuids,
+          },
+        },
         transaction,
       })
 
-      // 3. Создаем новых партнеров
+      // 4. Обновляем товары партнеров
       for (const partnerData of partner) {
-        const partner = await PartnerModel.create(
-          {
+        const partnerRecord = await PartnerModel.findOne({
+          where: {
             guid: partnerData.guid,
-            name: partnerData.name,
-            price: partnerData.price,
-            priority: partnerData.priority,
-            phone: partnerData.phone,
-            email: partnerData.email,
-            manager: partnerData.manager,
-            relationship_type: partnerData.relationship_type,
-            address: partnerData.address,
-            latitude: partnerData.latitude,
-            longitude: partnerData.longitude,
-            revenue_last_n_months: partnerData.revenue_last_n_months,
-            last_sale_date: partnerData.last_sale_date,
-            clients_transferred: partnerData.clients_transferred,
-            clients_in_progress: partnerData.clients_in_progress,
-            clients_converted: partnerData.clients_converted,
             client_request_guid: guid,
           },
-          { transaction }
-        )
+          transaction,
+        })
 
-        // Создаем товары партнера
-        if (partnerData.products && partnerData.products.length > 0) {
+        if (
+          partnerRecord &&
+          partnerData.products &&
+          partnerData.products.length > 0
+        ) {
+          // Удаляем старые товары партнера
+          await PartnerProductModel.destroy({
+            where: {
+              partner_guid: partnerRecord.guid,
+            },
+            transaction,
+          })
+
+          // Создаем новые товары
           const products = partnerData.products.map((product) => ({
             ...product,
-            partner_guid: partner.guid,
+            partner_guid: partnerRecord.guid,
           }))
           await PartnerProductModel.bulkCreate(products, { transaction })
         }
@@ -87,7 +155,7 @@ export class PartnersMapStorage {
 
       await transaction.commit()
 
-      // 4. Получаем полные данные с конкурентами
+      // 5. Получаем полные данные с партнерами
       const fullData = await ClientRequestModel.findByPk(guid, {
         include: [
           {
@@ -109,6 +177,7 @@ export class PartnersMapStorage {
       }
     } catch (error) {
       await transaction.rollback()
+      console.error('Ошибка при создании/обновлении заявки:', error)
       return {
         success: false,
         error:
@@ -159,17 +228,17 @@ export class PartnersMapStorage {
 
   async addPartner({
     partnerGuid,
-    clientGuid,
+    requestGuid,
   }: {
     partnerGuid: string
-    clientGuid: string
+    requestGuid: string
   }): Promise<{
     success: boolean
     message?: string
     error?: string
   }> {
     try {
-      const clientRequest = await ClientRequestModel.findByPk(clientGuid)
+      const clientRequest = await ClientRequestModel.findByPk(requestGuid)
 
       if (!clientRequest) {
         return {
@@ -186,13 +255,47 @@ export class PartnersMapStorage {
         }
       }
 
-      // Обновляем заявку
-      clientRequest.partnerGuid = partnerGuid
-      await clientRequest.save()
+      if (process.env.ALLOW_EXTERNAL_API === 'true') {
+        const client = await soap.createClientAsync(
+          process.env.TRANSFER_CLIENTS_SOAP_URL as string,
+          {
+            wsdl_headers: {
+              Authorization: `Basic ${stringToBase64(
+                `${process.env.USERNAME_1C}:${process.env.PASSWORD_1C}`
+              )}`,
+            },
+          }
+        )
+
+        client.setSecurity(
+          new soap.BasicAuthSecurity(
+            process.env.USERNAME_1C as string,
+            process.env.PASSWORD_1C as string
+          )
+        )
+
+        // const [result] = await client.AssignClientAsync({
+        //   data: JSON.stringify({
+        //     requestGuid,
+        //     partnerGuid,
+        //   }),
+        // })
+
+        // console.log({ result })
+
+        // Обновляем заявку
+        clientRequest.partnerGuid = partnerGuid
+        await clientRequest.save()
+
+        return {
+          success: true,
+          message: 'Клиент успешно передан партнеру',
+        }
+      }
 
       return {
-        success: true,
-        message: 'Клиент успешно передан партнеру',
+        success: false,
+        message: 'Отключен доступ к API',
       }
     } catch (error) {
       console.error('Ошибка передачи клиента:', error)

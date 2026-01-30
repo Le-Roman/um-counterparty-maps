@@ -4,16 +4,21 @@ import { formatAmount } from '../../utils/formatAmount'
 import moment from 'moment'
 
 interface PartnerAttributes extends Partner {
+  id: number
   formatted_revenue_last_n_months?: string
 }
 
 interface PartnerCreationAttributes
-  extends Optional<PartnerAttributes, 'formatted_revenue_last_n_months'> {}
+  extends Optional<
+    PartnerAttributes,
+    'id' | 'formatted_revenue_last_n_months'
+  > {}
 
 class PartnerModel
   extends Model<PartnerAttributes, PartnerCreationAttributes>
   implements PartnerAttributes
 {
+  public id!: number
   public guid!: string
   public name!: string
   public price!: string
@@ -39,9 +44,13 @@ class PartnerModel
 export const initPartnerModel = (sequelize: Sequelize): typeof PartnerModel => {
   PartnerModel.init(
     {
+      id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true,
+      },
       guid: {
         type: DataTypes.STRING(36),
-        primaryKey: true,
         allowNull: false,
         validate: {
           notEmpty: true,
@@ -63,9 +72,6 @@ export const initPartnerModel = (sequelize: Sequelize): typeof PartnerModel => {
       },
       email: {
         type: DataTypes.STRING(255),
-        validate: {
-          isEmail: true,
-        },
       },
       manager: {
         type: DataTypes.STRING(255),

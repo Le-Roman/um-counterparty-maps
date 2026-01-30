@@ -1111,7 +1111,7 @@ export class PartnersMapRenderer {
       const labels = ${JSON.stringify(labels)};
       const variantMap = ${data.variant_map};
       const addClientUrl = ${JSON.stringify(addClientUrl)}
-console.log(addClientUrl)
+
       // Подсчитываем сколько партнеров с координатами
       const partnersWithCoords = allPartners.filter(
         (p) =>
@@ -2483,8 +2483,8 @@ console.log(addClientUrl)
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
+                    requestGuid: clientRequestData.guid, 
                     partnerGuid: partnerGuid,
-                    clientGuid: clientRequestData.guid,
                   }),
                 }
               );

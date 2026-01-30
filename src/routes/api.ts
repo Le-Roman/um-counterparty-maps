@@ -268,9 +268,9 @@ router.post(
 // PUT /api/maps/partners/add_client - передача клиента партнеру
 router.put('/maps/partners/add_client', async (req, res) => {
   try {
-    const { partnerGuid, clientGuid } = req.body
+    const { partnerGuid, requestGuid } = req.body
 
-    if (!partnerGuid || !clientGuid) {
+    if (!partnerGuid || !requestGuid) {
       return res.status(400).json({
         success: false,
         error: 'Отсутствуют обязательные поля',
@@ -279,7 +279,7 @@ router.put('/maps/partners/add_client', async (req, res) => {
 
     const result = await PartnersMapStorage.addPartner({
       partnerGuid,
-      clientGuid,
+      requestGuid,
     })
 
     if (!result.success) {

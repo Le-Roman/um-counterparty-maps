@@ -9,9 +9,14 @@ module.exports = {
 
     if (!tableExists) {
       await queryInterface.createTable('partners', {
+        id: {
+          type: Sequelize.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+          comment: 'Уникальный идентификатор записи',
+        },
         guid: {
           type: Sequelize.STRING(36),
-          primaryKey: true,
           allowNull: false,
           comment: 'Уникальный идентификатор партнера',
         },
@@ -118,9 +123,14 @@ module.exports = {
         },
       })
 
-      await queryInterface.addIndex('partners', ['client_request_guid'], {
-        name: 'idx_partners_client_request_guid',
-      })
+      await queryInterface.addIndex(
+        'partners',
+        ['guid', 'client_request_guid'],
+        {
+          name: 'idx_partners_guid_client_request',
+          unique: true,
+        }
+      )
 
       await queryInterface.addIndex('partners', ['priority'], {
         name: 'idx_partners_priority',
