@@ -16,16 +16,16 @@ module.exports = {
           autoIncrement: true,
           comment: 'Уникальный идентификатор товара',
         },
-        partner_guid: {
-          type: Sequelize.STRING(36),
+        partner_id: {
+          type: Sequelize.INTEGER.UNSIGNED,
           allowNull: false,
-          comment: 'Ссылка на партнера',
           references: {
             model: 'partners',
-            key: 'guid',
+            key: 'id',
           },
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
+          comment: 'Ссылка на партнера (id)',
         },
         name: {
           type: Sequelize.STRING(255),
@@ -55,8 +55,8 @@ module.exports = {
         },
       })
 
-      await queryInterface.addIndex('partner_products', ['partner_guid'], {
-        name: 'idx_partner_products_partner_guid',
+      await queryInterface.addIndex('partner_products', ['partner_id'], {
+        name: 'idx_partner_products_partner_id',
       })
 
       console.log('✅ Таблица partner_products создана')

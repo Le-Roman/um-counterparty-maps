@@ -15,7 +15,7 @@ class PartnerProductModel
   implements PartnerProductAttributes
 {
   public id!: number
-  public partner_guid!: string
+  public partner_id!: number
   public name!: string
   public oborot!: number
   public formatted_oborot?: string
@@ -34,9 +34,15 @@ export const initPartnerProductModel = (
         primaryKey: true,
         autoIncrement: true,
       },
-      partner_guid: {
-        type: DataTypes.STRING(36),
+      partner_id: {
+        type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,
+        references: {
+          model: 'partners',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
       },
       name: {
         type: DataTypes.STRING(255),
@@ -73,6 +79,12 @@ export const initPartnerProductModel = (
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
+      indexes: [
+        {
+          name: 'idx_partner_products_partner_id',
+          fields: ['partner_id'],
+        },
+      ],
     }
   )
 

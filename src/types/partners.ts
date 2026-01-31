@@ -1,6 +1,6 @@
 export interface PartnerProduct {
   id?: number
-  partner_guid: string
+  partner_id: number
   name: string
   oborot: number
   last_sale_date_product?: string

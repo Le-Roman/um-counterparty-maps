@@ -75,12 +75,12 @@ export const initializeDatabase = async (): Promise<void> => {
     })
 
     Partner.hasMany(PartnerProduct, {
-      foreignKey: 'partner_guid',
+      foreignKey: 'partner_id',
       as: 'products',
     })
 
     PartnerProduct.belongsTo(Partner, {
-      foreignKey: 'partner_guid',
+      foreignKey: 'partner_id',
       as: 'partner',
     })
 

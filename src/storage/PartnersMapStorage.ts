@@ -147,7 +147,7 @@ export class PartnersMapStorage {
           // Удаляем старые товары партнера
           await PartnerProductModel.destroy({
             where: {
-              partner_guid: partnerRecord.guid,
+              partner_id: partnerRecord.id,
             },
             transaction,
           })
@@ -155,7 +155,7 @@ export class PartnersMapStorage {
           // Создаем новые товары
           const products = partnerData.products.map((product) => ({
             ...product,
-            partner_guid: partnerRecord.guid,
+            partner_id: partnerRecord.id,
           }))
           await PartnerProductModel.bulkCreate(products, { transaction })
         }
@@ -221,6 +221,21 @@ export class PartnersMapStorage {
           error: 'Заявка не найдена',
         }
       }
+
+      console.log({
+        // @ts-ignore
+        clientRequest: clientRequest.partners
+          .filter(
+            // @ts-ignore
+            ({ guid }) => guid === '5c30ae90-01d2-11e8-80c6-141877614d1c'
+          )
+          // @ts-ignore
+          .map((item) => [
+            item.dataValues.guid,
+            JSON.stringify(item.dataValues.products),
+          ]),
+      })
+
       return {
         success: true,
         data: clientRequest.toJSON() as ClientRequestInstance,
