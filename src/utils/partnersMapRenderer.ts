@@ -49,17 +49,17 @@ export class PartnersMapRenderer {
         case 1:
           return {
             selectedTypes: 'по выбранным типам товаров',
-            productsHeader: 'Оборот по типам товаров',
+            productsHeader: 'Оборот за период',
           }
         case 2:
           return {
             selectedTypes: 'по выбранной номенклатуре',
-            productsHeader: 'Оборот по номенклатуре',
+            productsHeader: 'Оборот за период',
           }
         default:
           return {
             selectedTypes: 'по выбранным типам товаров',
-            productsHeader: 'Оборот по типам товаров',
+            productsHeader: 'Оборот за период',
           }
       }
     }
@@ -405,7 +405,7 @@ export class PartnersMapRenderer {
         border: 1px solid #ddd;
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        z-index: 10001;
+        z-index: 100000;
         width: 500px;
         max-height: 400px;
         overflow: hidden;
@@ -427,6 +427,12 @@ export class PartnersMapRenderer {
         top: 0;
         z-index: 10;
       }
+
+      .products-popover-header-title {
+        display: flex;
+        flex-direction: column
+      }
+
       .close-popover-btn {
         background: transparent;
         border: none;
@@ -556,7 +562,7 @@ export class PartnersMapRenderer {
         border-radius: 8px;
         font-family: Arial, sans-serif;
         font-size: 14px;
-        z-index: 100000;
+        z-index: 10000;
         backdrop-filter: blur(2px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -1284,7 +1290,11 @@ export class PartnersMapRenderer {
             <button class="toggle-cards-btn" id="toggleCardsBtn">Скрыть все карточки</button>
           </div>
           <div class="filters-stats">
-            <div class="stats-population" style="margin-top: 4px;">Население: <span id="population">\${clientRequestData.population} чел.</span></div>
+            \${
+              clientRequestData.population > 0
+                ? \`<div class="stats-population" style="margin-top: 4px;">Население: <span id="population">\${clientRequestData.population} чел.</span></div>\`
+                : ''
+            }
             <div class="stats-total" style="margin-top: 4px;">Показано: <span id="visiblePartnersCount">\${partnersWithCoords}</span> из ${totalPartners}</div>
             \${
               unmarkedPartners > 0
@@ -1534,7 +1544,7 @@ export class PartnersMapRenderer {
                 </div>
                 <p><strong>Цена:</strong> \${partner.price || '-'}</p>
                 <p><strong>Общий оборот за период:</strong> \${partner.formatted_revenue_last_n_months || '0 ₽'}</p>
-                <p><strong>Оборот за период \${labels.selectedTypes}:</strong> \${formattedProductsTotal}</p>
+                <p><strong>\${labels.productsHeader} \${labels.selectedTypes}:</strong> \${formattedProductsTotal}</p>
               </div>
               <div class="partner-expanded">
                 <div class="partner-section-header">
@@ -1556,7 +1566,7 @@ export class PartnersMapRenderer {
                 <hr>
                 <div style="margin-bottom: 12px;">
                   <p>
-                    <strong>\${labels.productsHeader}:</strong> 
+                    <strong>\${labels.productsHeader} \${labels.selectedTypes}:</strong> 
                     \${partnerProductsForDetails && partnerProductsForDetails.length > 0
                         ? \`
                       <span>
@@ -2273,7 +2283,10 @@ export class PartnersMapRenderer {
           popover.className = 'products-popover active';
           popover.innerHTML = \`
             <div class="products-popover-header">
-              <span>\${labels.productsHeader}: \${partnerName}</span>
+            <div class="products-popover-header-title">
+              <span>\${labels.productsHeader} \${labels.selectedTypes}</span>
+              <span>\${partnerName}</span>
+            </div>
               <button class="close-popover-btn" title="Закрыть">×</button>
             </div>
             <div class="products-table-container">
