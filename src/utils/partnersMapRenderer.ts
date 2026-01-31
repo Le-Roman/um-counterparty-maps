@@ -1206,7 +1206,7 @@ export class PartnersMapRenderer {
         const generateRevenueFilterHTML = () => {
           return \`
             <div class="filter-section">
-              <h4>Оборот за 3 месяца</h4>
+              <h4>Оборот за период</h4>
               <div class="revenue-filter">
                 <div class="revenue-option">
                   <input type="radio" id="revenue-all" name="revenue" value="all" checked>
@@ -1360,7 +1360,7 @@ export class PartnersMapRenderer {
         // Функция для генерации таблицы товаров
         function generateProductsTableHTML(products, partnerName) {
           if (!products || products.length === 0) {
-            return '<div class="no-products">Нет данных о товарах</div>';
+            return '<div class="no-products">нет данных</div>';
           }
 
           // Считаем общую сумму (для отфильтрованных товаров)
@@ -1533,8 +1533,8 @@ export class PartnersMapRenderer {
                   \${statusIcons}
                 </div>
                 <p><strong>Цена:</strong> \${partner.price || '-'}</p>
-                <p><strong>Общий оборот за 3 мес.:</strong> \${partner.formatted_revenue_last_n_months || '0 ₽'}</p>
-                <p><strong>Оборот за 3 мес. \${labels.selectedTypes}:</strong> \${formattedProductsTotal}</p>
+                <p><strong>Общий оборот за период:</strong> \${partner.formatted_revenue_last_n_months || '0 ₽'}</p>
+                <p><strong>Оборот за период \${labels.selectedTypes}:</strong> \${formattedProductsTotal}</p>
               </div>
               <div class="partner-expanded">
                 <div class="partner-section-header">
@@ -1548,7 +1548,7 @@ export class PartnersMapRenderer {
                 <p><strong>Адрес:</strong> \${partner.address || '-'}</p>
                 <hr>
                 <p><strong>Цена:</strong> \${partner.price || '-'}</p>
-                <p><strong>Общий оборот за 3 мес.:</strong> \${partner.formatted_revenue_last_n_months || '0 ₽'}</p>
+                <p><strong>Общий оборот за период:</strong> \${partner.formatted_revenue_last_n_months || '0 ₽'}</p>
                 <p><strong>Передано клиентов:</strong> \${partner.clients_transferred || 0}</p>
                 <p><strong>В работе клиентов:</strong> \${partner.clients_in_progress || 0}</p>
                 <p><strong>Сработано клиентов:</strong> \${partner.clients_converted || 0}</p>
@@ -1567,7 +1567,7 @@ export class PartnersMapRenderer {
                         (показать детализацию)
                       </span>
                     \`
-                        : '<span style="margin-left: 8px; color: #999;">Нет данных о товарах</span>'
+                        : '<span style="margin-left: 8px; color: #999;">нет данных</span>'
                     }
                   </p>
                 </div>
@@ -2474,7 +2474,6 @@ export class PartnersMapRenderer {
             cancelBtn.disabled = true
 
             try {
-            console.log('ffff')
               const response = await fetch(
                 addClientUrl,
                 {
