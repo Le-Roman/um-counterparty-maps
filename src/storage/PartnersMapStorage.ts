@@ -263,31 +263,33 @@ export class PartnersMapStorage {
         }
       }
 
-      if (process.env.ALLOW_EXTERNAL_API !== 'true') {
-        // const client = await soap.createClientAsync(
-        //   process.env.TRANSFER_CLIENTS_SOAP_URL as string,
-        //   {
-        //     wsdl_headers: {
-        //       Authorization: `Basic ${stringToBase64(
-        //         `${process.env.USERNAME_1C}:${process.env.PASSWORD_1C}`
-        //       )}`,
-        //     },
-        //   }
-        // )
+      if (process.env.ALLOW_EXTERNAL_API === 'true') {
+        const client = await soap.createClientAsync(
+          process.env.TRANSFER_CLIENTS_SOAP_URL as string,
+          {
+            wsdl_headers: {
+              Authorization: `Basic ${stringToBase64(
+                `${process.env.USERNAME_1C}:${process.env.PASSWORD_1C}`
+              )}`,
+            },
+          }
+        )
 
-        // client.setSecurity(
-        //   new soap.BasicAuthSecurity(
-        //     process.env.USERNAME_1C as string,
-        //     process.env.PASSWORD_1C as string
-        //   )
-        // )
+        client.setSecurity(
+          new soap.BasicAuthSecurity(
+            process.env.USERNAME_1C as string,
+            process.env.PASSWORD_1C as string
+          )
+        )
 
-        // const [result] = await client.AssignClientAsync({
-        //   data: JSON.stringify({
-        //     requestGuid,
-        //     partnerGuid,
-        //   }),
-        // })
+        // console.log({ client })
+
+        const [result] = await client.AssignClientAsync({
+          data: JSON.stringify({
+            guid: requestGuid,
+            partnerGuid,
+          }),
+        })
 
         // console.log({ result })
 
