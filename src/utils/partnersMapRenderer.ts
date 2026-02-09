@@ -1,7 +1,7 @@
 import { ClientRequestInstance, Partner } from '../types/partners'
 import { formatAmount } from './formatAmount'
 
-const addClientUrl = `https://${process.env.HOST}/api/maps/partners/add_client`
+ const addClientUrl = `https://${process.env.HOST}/api/maps/partners/add_client`
 
 export class PartnersMapRenderer {
   static generateHTML(guid: string, data: ClientRequestInstance): string {
@@ -518,6 +518,13 @@ export class PartnersMapRenderer {
         cursor: pointer;
         transform: translate(-17px, -34px);
         position: relative;
+        transition: transform 0.2s ease;
+      }
+      /* Активный маркер */
+      .pin-marker.active {
+        filter: drop-shadow(0 0 8px rgba(0, 81, 255, 0.7));
+        transform: translate(-17px, -34px) scale(1.1);
+        z-index: 1001;
       }
       /* Зеленый маркер для клиента */
       .pin-marker.green svg path {
@@ -1812,6 +1819,10 @@ export class PartnersMapRenderer {
           const toggleBtn = document.getElementById('toggleCardsBtn');
           if (allCardsVisible) {
             toggleBtn.textContent = 'Скрыть все карточки';
+            // Сбрасываем флаги ручного скрытия при показе всех карточек
+            partnerMarkers.forEach(marker => {
+              delete marker.element.dataset.balloonHidden;
+            });
           } else {
             toggleBtn.textContent = 'Показать все карточки';
           }
@@ -1840,7 +1851,11 @@ export class PartnersMapRenderer {
             const balloonData = partnerBalloons.get(marker.element);
             if (!balloonData || !balloonData.container) return;
 
-            if (allCardsVisible) {
+            // Если пользователь вручную скрыл балун через клик на маркере,
+            // не показываем его даже при обновлении фильтров
+            const wasManuallyHidden = marker.element.dataset.balloonHidden === 'true';
+            
+            if (allCardsVisible && !wasManuallyHidden) {
               if (hasClient) {
                 balloonData.container.style.display = 'block';
                 const partnersSection = balloonData.container.querySelector(
@@ -1872,7 +1887,8 @@ export class PartnersMapRenderer {
                   counterBadge.classList.add('hidden');
                 }
               }
-            } else {
+            } else if (!wasManuallyHidden) {
+              // Логика для скрытого режима (если не был скрыт вручную)
               if (hasClient) {
                 balloonData.container.style.display = 'block';
                 const partnersSection = balloonData.container.querySelector(
@@ -2434,9 +2450,41 @@ export class PartnersMapRenderer {
 
           markerElement.addEventListener('click', (event) => {
             event.stopPropagation();
-            if (balloonData.container.style.display !== 'none') {
+            
+            const balloonData = partnerBalloons.get(markerElement);
+            if (!balloonData || !balloonData.container) return;
+            
+            // Снимаем активный класс со всех маркеров
+            document.querySelectorAll('.pin-marker.active').forEach(marker => {
+              marker.classList.remove('active');
+            });
+            
+            // Получаем текущее состояние балуна
+            const isCurrentlyVisible = balloonData.container.style.display !== 'none';
+            const isCurrentlyActive = currentActiveContainer === balloonData.container;
+            
+            if (!isCurrentlyVisible) {
+              // Если балун скрыт - показываем его
+              balloonData.container.style.display = 'block';
+              markerElement.dataset.balloonHidden = 'false'; // Сбрасываем флаг ручного скрытия
+              markerElement.classList.add('active'); // Добавляем активный класс
               activateBalloon(balloonData.container, balloonData.balloon);
+            } else if (isCurrentlyActive) {
+              // Если балун видим и активен - скрываем его
+              balloonData.container.style.display = 'none';
+              balloonData.container.classList.remove('active');
+              balloonData.balloon.classList.remove('active');
+              currentActiveContainer = null;
+              markerElement.dataset.balloonHidden = 'true'; // Устанавливаем флаг ручного скрытия
+              markerElement.classList.remove('active'); // Убираем активный класс
+            } else {
+              // Если балун видим, но не активен - активируем его
+              markerElement.classList.add('active'); // Добавляем активный класс
+              activateBalloon(balloonData.container, balloonData.balloon);
+              markerElement.dataset.balloonHidden = 'false'; // Сбрасываем флаг ручного скрытия
             }
+            
+            updateBalloonPosition(markerElement, balloonData.container);
           });
 
           setTimeout(() => {
@@ -2538,6 +2586,8 @@ export class PartnersMapRenderer {
                 const balloonData = balloonContainers.get(marker.element);
                 if (balloonData) {
                   activateBalloon(balloonData.container, balloonData.balloon);
+                  // Добавляем активный класс к маркеру клиента
+                  marker.element.classList.add('active');
                 }
               }, 1000);
             }
