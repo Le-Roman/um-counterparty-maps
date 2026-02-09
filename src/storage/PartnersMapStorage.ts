@@ -1,5 +1,4 @@
 import * as soap from 'soap'
-import { Op } from 'sequelize'
 import sequelize from '../config/database'
 import ClientRequestModel from '../db/models/ClientRequest'
 import PartnerModel from '../db/models/Partner'
@@ -275,15 +274,16 @@ export class PartnersMapStorage {
           }
         )
 
+        
         client.setSecurity(
           new soap.BasicAuthSecurity(
             process.env.USERNAME_1C as string,
             process.env.PASSWORD_1C as string
           )
         )
-
-        // console.log({ client })
-
+        
+        console.log({ client })
+        
         const [result] = await client.AssignClientAsync({
           data: JSON.stringify({
             guid: requestGuid,
@@ -291,7 +291,7 @@ export class PartnersMapStorage {
           }),
         })
 
-        // console.log({ result })
+        console.log({ result })
 
         // Обновляем заявку
         clientRequest.partnerGuid = partnerGuid
